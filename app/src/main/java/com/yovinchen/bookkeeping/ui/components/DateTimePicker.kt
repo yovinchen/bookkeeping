@@ -20,7 +20,6 @@ fun DateTimePicker(
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    var tempDateTime by remember { mutableStateOf(selectedDateTime) }
     
     val dateFormatter = remember { DateTimeFormatter.ofPattern("yyyy年MM月dd日") }
     val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
