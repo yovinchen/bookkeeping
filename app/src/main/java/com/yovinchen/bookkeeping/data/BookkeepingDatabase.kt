@@ -28,21 +28,21 @@ abstract class BookkeepingDatabase : RoomDatabase() {
         private var Instance: BookkeepingDatabase? = null
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(database: SupportSQLiteDatabase) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 try {
                     Log.d(TAG, "Starting migration from version 1 to 2")
                     
                     // 检查表是否存在
-                    val cursor = database.query("SELECT name FROM sqlite_master WHERE type='table' AND name='categories'")
+                    val cursor = db.query("SELECT name FROM sqlite_master WHERE type='table' AND name='categories'")
                     val tableExists = cursor.moveToFirst()
                     cursor.close()
                     
                     if (tableExists) {
                         // 如果表存在，执行迁移
                         Log.d(TAG, "Categories table exists, performing migration")
-                        database.execSQL("ALTER TABLE categories RENAME TO categories_old")
+                        db.execSQL("ALTER TABLE categories RENAME TO categories_old")
                         
-                        database.execSQL("""
+                        db.execSQL("""
                             CREATE TABLE categories (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                                 name TEXT NOT NULL,
@@ -50,16 +50,16 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                             )
                         """)
                         
-                        database.execSQL("""
+                        db.execSQL("""
                             INSERT INTO categories (name, type)
                             SELECT name, type FROM categories_old
                         """)
                         
-                        database.execSQL("DROP TABLE categories_old")
+                        db.execSQL("DROP TABLE categories_old")
                     } else {
                         // 如果表不存在，直接创建新表
                         Log.d(TAG, "Categories table does not exist, creating new table")
-                        database.execSQL("""
+                        db.execSQL("""
                             CREATE TABLE IF NOT EXISTS categories (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                                 name TEXT NOT NULL,
@@ -69,7 +69,7 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                     }
                     
                     // 确保 bookkeeping_records 表存在
-                    database.execSQL("""
+                    db.execSQL("""
                         CREATE TABLE IF NOT EXISTS bookkeeping_records (
                             id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                             type TEXT NOT NULL,
