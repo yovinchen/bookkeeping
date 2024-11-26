@@ -8,39 +8,38 @@ import com.yovinchen.bookkeeping.data.BookkeepingDatabase
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.Category
 import com.yovinchen.bookkeeping.model.TransactionType
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.YearMonth
 import java.util.Date
 import java.util.Calendar
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val TAG = "HomeViewModel"
-    private val database = BookkeepingDatabase.getDatabase(application)
-    private val dao = database.bookkeepingDao()
-
-    val records = dao.getAllRecords()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
-    private val _totalIncome = MutableStateFlow(0.0)
-    val totalIncome: StateFlow<Double> = _totalIncome.asStateFlow()
-
-    private val _totalExpense = MutableStateFlow(0.0)
-    val totalExpense: StateFlow<Double> = _totalExpense.asStateFlow()
-
-    private val _selectedCategoryType = MutableStateFlow(TransactionType.EXPENSE)
-    val selectedCategoryType: StateFlow<TransactionType> = _selectedCategoryType.asStateFlow()
+    private val dao = BookkeepingDatabase.getDatabase(application).bookkeepingDao()
 
     private val _selectedRecordType = MutableStateFlow<TransactionType?>(null)
     val selectedRecordType: StateFlow<TransactionType?> = _selectedRecordType.asStateFlow()
 
     private val _selectedDateTime = MutableStateFlow(LocalDateTime.now())
     val selectedDateTime: StateFlow<LocalDateTime> = _selectedDateTime.asStateFlow()
+
+    private val _selectedCategoryType = MutableStateFlow(TransactionType.EXPENSE)
+    val selectedCategoryType: StateFlow<TransactionType> = _selectedCategoryType.asStateFlow()
+
+    private val _selectedMonth = MutableStateFlow(YearMonth.now())
+    val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
+
+    private val records = dao.getAllRecords()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     val categories: StateFlow<List<Category>> = _selectedCategoryType
         .flatMapLatest { type ->
@@ -52,36 +51,89 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             initialValue = emptyList()
         )
 
-    val filteredRecords = combine(records, selectedRecordType) { records, type ->
-        when (type) {
-            null -> records.sortedByDescending { it.date }
-            else -> records.filter { it.type == type }.sortedByDescending { it.date }
-        }
+    val filteredRecords = combine(
+        records,
+        _selectedRecordType,
+        _selectedMonth
+    ) { records, selectedType, selectedMonth ->
+        records
+            .filter { record ->
+                val recordDate = record.date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+                val recordYearMonth = YearMonth.from(recordDate)
+                
+                val typeMatches = selectedType?.let { record.type == it } ?: true
+                val monthMatches = recordYearMonth == selectedMonth
+                
+                typeMatches && monthMatches
+            }
+            .sortedByDescending { it.date }
+            .groupBy { record ->
+                val calendar = Calendar.getInstance().apply { time = record.date }
+                calendar.apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.time
+            }
     }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        emptyMap()
     )
 
-    private val _uiState = MutableStateFlow(UiState())
-    val uiState: StateFlow<UiState> = _uiState.asStateFlow()
+    val totalIncome = combine(
+        records,
+        _selectedMonth
+    ) { records, selectedMonth ->
+        records
+            .filter { record ->
+                val recordDate = record.date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+                val recordYearMonth = YearMonth.from(recordDate)
+                
+                record.type == TransactionType.INCOME && recordYearMonth == selectedMonth
+            }
+            .sumOf { it.amount }
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        0.0
+    )
+
+    val totalExpense = combine(
+        records,
+        _selectedMonth
+    ) { records, selectedMonth ->
+        records
+            .filter { record ->
+                val recordDate = record.date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+                val recordYearMonth = YearMonth.from(recordDate)
+                
+                record.type == TransactionType.EXPENSE && recordYearMonth == selectedMonth
+            }
+            .sumOf { it.amount }
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        0.0
+    )
+
+    private fun updateTotals() {
+        // 移除未使用的参数
+    }
 
     init {
         viewModelScope.launch {
-            records.collect { recordsList ->
-                updateTotals(recordsList)
+            records.collect {
+                updateTotals()
             }
         }
-    }
-
-    private fun updateTotals(records: List<BookkeepingRecord>) {
-        _totalIncome.value = records
-            .filter { it.type == TransactionType.INCOME }
-            .sumOf { it.amount }
-
-        _totalExpense.value = records
-            .filter { it.type == TransactionType.EXPENSE }
-            .sumOf { it.amount }
     }
 
     fun addRecord(type: TransactionType, amount: Double, category: String, description: String) {
@@ -102,35 +154,29 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         _selectedDateTime.value = dateTime
     }
 
-    fun setSelectedCategoryType(type: TransactionType) {
-        _selectedCategoryType.value = type
-    }
-
     fun setSelectedRecordType(type: TransactionType?) {
         _selectedRecordType.value = type
     }
 
+    fun setSelectedCategoryType(type: TransactionType) {
+        _selectedCategoryType.value = type
+    }
+
+    fun setSelectedMonth(yearMonth: YearMonth) {
+        _selectedMonth.value = yearMonth
+    }
+
+    fun moveMonth(forward: Boolean) {
+        val current = _selectedMonth.value
+        _selectedMonth.value = if (forward) {
+            current.plusMonths(1)
+        } else {
+            current.minusMonths(1)
+        }
+    }
+
     fun resetSelectedDateTime() {
         _selectedDateTime.value = LocalDateTime.now()
-    }
-
-    fun addCategory(name: String, type: TransactionType) {
-        viewModelScope.launch {
-            val category = Category(name = name, type = type)
-            dao.insertCategory(category)
-        }
-    }
-
-    fun updateCategory(category: Category, newName: String) {
-        viewModelScope.launch {
-            dao.updateCategory(category.copy(name = newName))
-        }
-    }
-
-    fun deleteCategory(category: Category) {
-        viewModelScope.launch {
-            dao.deleteCategory(category)
-        }
     }
 
     fun updateRecord(record: BookkeepingRecord) {
@@ -165,11 +211,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         val start = Date.from(startDate.atZone(ZoneId.systemDefault()).toInstant())
         val end = Date.from(endDate.atZone(ZoneId.systemDefault()).toInstant())
         return dao.getRecordsByDateRange(start, end)
-    }
-
-    // 获取指定类别的记录
-    fun getRecordsByCategory(category: String): Flow<List<BookkeepingRecord>> {
-        return dao.getRecordsByCategory(category)
     }
 
     // 获取指定类型的记录

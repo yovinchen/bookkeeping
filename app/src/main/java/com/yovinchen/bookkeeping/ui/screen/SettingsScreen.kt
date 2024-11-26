@@ -7,19 +7,38 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yovinchen.bookkeeping.model.Category
 import com.yovinchen.bookkeeping.model.ThemeMode
+import com.yovinchen.bookkeeping.model.TransactionType
 import com.yovinchen.bookkeeping.ui.components.ColorPicker
 import com.yovinchen.bookkeeping.ui.components.predefinedColors
+import com.yovinchen.bookkeeping.ui.dialog.CategoryManagementDialog
+import com.yovinchen.bookkeeping.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     currentTheme: ThemeMode,
-    onThemeChange: (ThemeMode) -> Unit
+    onThemeChange: (ThemeMode) -> Unit,
+    viewModel: SettingsViewModel = viewModel()
 ) {
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showCategoryDialog by remember { mutableStateOf(false) }
+    
+    val categories by viewModel.categories.collectAsState()
+    val selectedType by viewModel.selectedCategoryType.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // 类别管理设置项
+        ListItem(
+            headlineContent = { Text("类别管理") },
+            supportingContent = { Text("管理收入和支出类别") },
+            modifier = Modifier.clickable { showCategoryDialog = true }
+        )
+
+        Divider()
+
         // 主题设置项
         ListItem(
             headlineContent = { Text("主题设置") },
@@ -98,6 +117,19 @@ fun SettingsScreen(
                 }
             )
         }
+    }
+
+    // 类别管理对话框
+    if (showCategoryDialog) {
+        CategoryManagementDialog(
+            onDismiss = { showCategoryDialog = false },
+            categories = categories,
+            onAddCategory = viewModel::addCategory,
+            onDeleteCategory = viewModel::deleteCategory,
+            onUpdateCategory = viewModel::updateCategory,
+            selectedType = selectedType,
+            onTypeChange = viewModel::setSelectedCategoryType
+        )
     }
 }
 

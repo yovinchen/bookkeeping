@@ -7,67 +7,54 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.TransactionType
 import com.yovinchen.bookkeeping.ui.dialog.AddRecordDialog
-import com.yovinchen.bookkeeping.ui.dialog.CategoryManagementDialog
 import com.yovinchen.bookkeeping.ui.dialog.RecordEditDialog
 import com.yovinchen.bookkeeping.viewmodel.HomeViewModel
+import java.time.YearMonth
 import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    modifier: Modifier = Modifier,
-    viewModel: HomeViewModel = viewModel()
+    modifier: Modifier = Modifier, viewModel: HomeViewModel = viewModel()
 ) {
-    val records by viewModel.filteredRecords.collectAsState()
+    val filteredRecords by viewModel.filteredRecords.collectAsState()
     val totalIncome by viewModel.totalIncome.collectAsState()
     val totalExpense by viewModel.totalExpense.collectAsState()
     val categories by viewModel.categories.collectAsState()
-    val selectedType by viewModel.selectedCategoryType.collectAsState()
     val selectedRecordType by viewModel.selectedRecordType.collectAsState()
-    
+    val selectedMonth by viewModel.selectedMonth.collectAsState()
+
     var showAddDialog by remember { mutableStateOf(false) }
-    var showCategoryDialog by remember { mutableStateOf(false) }
     var selectedRecord by remember { mutableStateOf<BookkeepingRecord?>(null) }
 
-    Scaffold(
-        modifier = modifier.fillMaxSize(),
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showAddDialog = true }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "添加记录")
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End,
-        topBar = {
-            TopAppBar(
-                title = { Text("记账本") },
-                actions = {
-                    IconButton(onClick = { showCategoryDialog = true }) {
-                        Icon(Icons.Default.Settings, contentDescription = "类别管理")
-                    }
-                }
-            )
+    Scaffold(modifier = modifier.fillMaxSize(), floatingActionButton = {
+        FloatingActionButton(onClick = { showAddDialog = true }) {
+            Icon(Icons.Default.Add, contentDescription = "添加记录")
         }
-    ) { padding ->
+    }, floatingActionButtonPosition = FabPosition.End, topBar = {
+        TopAppBar(title = { Text("记账本") })
+    }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             // 顶部统计信息
             MonthlyStatistics(
@@ -76,21 +63,90 @@ fun HomeScreen(
                 onIncomeClick = { viewModel.setSelectedRecordType(TransactionType.INCOME) },
                 onExpenseClick = { viewModel.setSelectedRecordType(TransactionType.EXPENSE) },
                 selectedType = selectedRecordType,
-                onClearFilter = { viewModel.setSelectedRecordType(null) }
+                onClearFilter = { viewModel.setSelectedRecordType(null) },
+                selectedMonth = selectedMonth,
+                onPreviousMonth = { viewModel.setSelectedMonth(selectedMonth.minusMonths(1)) },
+                onNextMonth = { viewModel.setSelectedMonth(selectedMonth.plusMonths(1)) }
             )
 
             // 记录列表
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(records) { record ->
-                    RecordItem(
-                        record = record,
-                        onClick = { selectedRecord = record },
-                        onDelete = { viewModel.deleteRecord(record) }
-                    )
+                filteredRecords.forEach { (date, records) ->
+                    item {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                            shape = RoundedCornerShape(12.dp),
+                            tonalElevation = 2.dp
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                // 日期标签
+                                Text(
+                                    text = SimpleDateFormat(
+                                        "yyyy年MM月dd日 E", Locale.CHINESE
+                                    ).format(date),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // 当天的记录
+                                records.forEachIndexed { index, record ->
+                                    RecordItem(record = record,
+                                        onClick = { selectedRecord = record },
+                                        onDelete = { viewModel.deleteRecord(record) })
+
+                                    if (index < records.size - 1) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(vertical = 8.dp),
+                                            color = MaterialTheme.colorScheme.surfaceVariant,
+                                            thickness = 0.5.dp
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // 当天统计
+                                HorizontalDivider(
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    thickness = 0.5.dp
+                                )
+
+                                val dayIncome = records.filter { it.type == TransactionType.INCOME }
+                                    .sumOf { it.amount }
+                                val dayExpense =
+                                    records.filter { it.type == TransactionType.EXPENSE }
+                                        .sumOf { it.amount }
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = "收入: ¥%.2f".format(dayIncome),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = "支出: ¥%.2f".format(dayExpense),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -98,9 +154,10 @@ fun HomeScreen(
         // 添加记录对话框
         if (showAddDialog) {
             val selectedDateTime by viewModel.selectedDateTime.collectAsState()
+            val selectedCategoryType by viewModel.selectedCategoryType.collectAsState()
             AddRecordDialog(
-                onDismiss = {
-                    showAddDialog = false
+                onDismiss = { 
+                    showAddDialog = false 
                     viewModel.resetSelectedDateTime()
                 },
                 onConfirm = { type, amount, category, description ->
@@ -108,23 +165,10 @@ fun HomeScreen(
                     showAddDialog = false
                 },
                 categories = categories,
-                selectedType = selectedType,
-                onTypeChange = { viewModel.setSelectedCategoryType(it) },
+                selectedType = selectedCategoryType,
+                onTypeChange = viewModel::setSelectedCategoryType,
                 selectedDateTime = selectedDateTime,
-                onDateTimeSelected = { viewModel.setSelectedDateTime(it) }
-            )
-        }
-
-        // 类别管理对话框
-        if (showCategoryDialog) {
-            CategoryManagementDialog(
-                onDismiss = { showCategoryDialog = false },
-                categories = categories,
-                onAddCategory = { name, type -> viewModel.addCategory(name, type) },
-                onDeleteCategory = { category -> viewModel.deleteCategory(category) },
-                onUpdateCategory = { category, newName -> viewModel.updateCategory(category, newName) },
-                selectedType = selectedType,
-                onTypeChange = { viewModel.setSelectedCategoryType(it) }
+                onDateTimeSelected = viewModel::setSelectedDateTime
             )
         }
 
@@ -151,6 +195,9 @@ fun MonthlyStatistics(
     onExpenseClick: () -> Unit,
     selectedType: TransactionType?,
     onClearFilter: () -> Unit,
+    selectedMonth: YearMonth,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -164,30 +211,42 @@ fun MonthlyStatistics(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Text(
-                text = "本月统计",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            // 月份选择器
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onPreviousMonth) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "上个月")
+                }
+                
+                Text(
+                    text = "${selectedMonth.year}年${selectedMonth.monthValue}月",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                
+                IconButton(onClick = onNextMonth) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "下个月")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 // 收入统计
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onIncomeClick() }
-                        .background(
-                            if (selectedType == TransactionType.INCOME)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                Color.Transparent,
-                            RoundedCornerShape(8.dp)
-                        )
-                        .padding(8.dp)
-                ) {
+                Column(modifier = Modifier
+                    .weight(1f)
+                    .clickable { onIncomeClick() }
+                    .background(
+                        if (selectedType == TransactionType.INCOME) MaterialTheme.colorScheme.primaryContainer
+                        else Color.Transparent,
+                        RoundedCornerShape(8.dp)
+                    )
+                    .padding(8.dp)) {
                     Text(
                         text = "收入",
                         style = MaterialTheme.typography.titleMedium
@@ -202,19 +261,15 @@ fun MonthlyStatistics(
                 Spacer(modifier = Modifier.width(16.dp))
 
                 // 支出统计
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onExpenseClick() }
-                        .background(
-                            if (selectedType == TransactionType.EXPENSE)
-                                MaterialTheme.colorScheme.primaryContainer
-                            else
-                                Color.Transparent,
-                            RoundedCornerShape(8.dp)
-                        )
-                        .padding(8.dp)
-                ) {
+                Column(modifier = Modifier
+                    .weight(1f)
+                    .clickable { onExpenseClick() }
+                    .background(
+                        if (selectedType == TransactionType.EXPENSE) MaterialTheme.colorScheme.primaryContainer
+                        else Color.Transparent,
+                        RoundedCornerShape(8.dp)
+                    )
+                    .padding(8.dp)) {
                     Text(
                         text = "支出",
                         style = MaterialTheme.typography.titleMedium
@@ -261,8 +316,7 @@ fun RecordItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = record.category,
-                    style = MaterialTheme.typography.titleMedium
+                    text = record.category, style = MaterialTheme.typography.titleMedium
                 )
                 if (record.description.isNotEmpty()) {
                     Text(
@@ -272,8 +326,9 @@ fun RecordItem(
                     )
                 }
                 Text(
-                    text = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-                        .format(record.date),
+                    text = SimpleDateFormat(
+                        "yyyy-MM-dd HH:mm", Locale.getDefault()
+                    ).format(record.date),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -284,18 +339,14 @@ fun RecordItem(
             ) {
                 Text(
                     text = if (record.type == TransactionType.EXPENSE) "-" else "+",
-                    color = if (record.type == TransactionType.EXPENSE)
-                        MaterialTheme.colorScheme.error
-                    else
-                        MaterialTheme.colorScheme.primary,
+                    color = if (record.type == TransactionType.EXPENSE) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
                     text = String.format("%.2f", record.amount),
-                    color = if (record.type == TransactionType.EXPENSE)
-                        MaterialTheme.colorScheme.error
-                    else
-                        MaterialTheme.colorScheme.primary,
+                    color = if (record.type == TransactionType.EXPENSE) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(end = 8.dp)
                 )
