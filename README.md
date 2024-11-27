@@ -87,7 +87,7 @@
 ### v1.1.0 (2024-01-10)
 - 成员管理功能
   - 成员添加/编辑/删除
-  - 记账时关联成员
+  - 记账时选择相关成员
   - 成员消费统计
 - UI/UX 优化
   - 记录展示优化
@@ -129,7 +129,7 @@
 ## 联系方式
 
 - 作者：YovinChen
-- 邮箱：yovinchen@outlook.com
+- 邮箱：gzh298255@gmail.com
 - 博客：[blog.hhdxw.top](https://blog.hhdxw.top)
 
 ## 致谢
