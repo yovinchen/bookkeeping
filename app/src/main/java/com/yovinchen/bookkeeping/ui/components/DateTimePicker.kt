@@ -2,14 +2,20 @@ package com.yovinchen.bookkeeping.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,8 +60,10 @@ fun DateTimePicker(
         }
     }
 
-    // 日期选择器对话框
+    // 自定义日期选择器对话框
     if (showDatePicker) {
+        var currentYearMonth by remember { mutableStateOf(YearMonth.from(selectedDateTime)) }
+        
         Dialog(onDismissRequest = { showDatePicker = false }) {
             Surface(
                 modifier = Modifier
@@ -67,19 +75,109 @@ fun DateTimePicker(
                 Column(
                     modifier = Modifier.padding(16.dp)
                 ) {
-                    val datePickerState = rememberDatePickerState(
-                        initialSelectedDateMillis = selectedDateTime
-                            .toLocalDate()
-                            .atStartOfDay()
-                            .toInstant(java.time.ZoneOffset.UTC)
-                            .toEpochMilli()
-                    )
+                    // 年月选择器
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = {
+                            currentYearMonth = currentYearMonth.minusMonths(1)
+                        }) {
+                            Text("<")
+                        }
+                        
+                        Text(
+                            text = "${currentYearMonth.year}年${currentYearMonth.monthValue}月",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        
+                        IconButton(onClick = {
+                            currentYearMonth = currentYearMonth.plusMonths(1)
+                        }) {
+                            Text(">")
+                        }
+                    }
 
-                    DatePicker(
-                        state = datePickerState,
-                        showModeToggle = false
-                    )
+                    // 星期标题
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        listOf("日", "一", "二", "三", "四", "五", "六").forEach { day ->
+                            Text(
+                                text = day,
+                                modifier = Modifier.weight(1f),
+                                textAlign = TextAlign.Center,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
 
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 日期网格
+                    val dates = remember(currentYearMonth) {
+                        val firstDayOfMonth = currentYearMonth.atDay(1)
+                        val lastDayOfMonth = currentYearMonth.atEndOfMonth()
+                        val firstDayOfGrid = firstDayOfMonth.minusDays(firstDayOfMonth.dayOfWeek.value.toLong())
+                        
+                        buildList {
+                            var currentDate = firstDayOfGrid
+                            while (currentDate.isBefore(lastDayOfMonth.plusDays(7))) {
+                                add(currentDate)
+                                currentDate = currentDate.plusDays(1)
+                            }
+                        }
+                    }
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(7),
+                        modifier = Modifier.height(240.dp)
+                    ) {
+                        items(dates.size) { index ->
+                            val date = dates[index]
+                            val isSelected = date.isEqual(selectedDateTime.toLocalDate())
+                            val isCurrentMonth = date.monthValue == currentYearMonth.monthValue
+                            
+                            Surface(
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .padding(2.dp)
+                                    .clickable {
+                                        val newDateTime = selectedDateTime
+                                            .withYear(date.year)
+                                            .withMonth(date.monthValue)
+                                            .withDayOfMonth(date.dayOfMonth)
+                                        onDateTimeSelected(newDateTime)
+                                        showDatePicker = false
+                                    },
+                                shape = MaterialTheme.shapes.small,
+                                color = when {
+                                    isSelected -> MaterialTheme.colorScheme.primary
+                                    else -> MaterialTheme.colorScheme.surface
+                                }
+                            ) {
+                                Text(
+                                    text = date.dayOfMonth.toString(),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(4.dp),
+                                    textAlign = TextAlign.Center,
+                                    color = when {
+                                        isSelected -> MaterialTheme.colorScheme.onPrimary
+                                        !isCurrentMonth -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                        else -> MaterialTheme.colorScheme.onSurface
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // 按钮行
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -91,19 +189,7 @@ fun DateTimePicker(
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
-                            onClick = {
-                                datePickerState.selectedDateMillis?.let { millis ->
-                                    val newDate = java.time.Instant.ofEpochMilli(millis)
-                                        .atZone(java.time.ZoneOffset.UTC)
-                                        .toLocalDate()
-                                    val newDateTime = newDate.atTime(
-                                        selectedDateTime.hour,
-                                        selectedDateTime.minute
-                                    )
-                                    onDateTimeSelected(newDateTime)
-                                }
-                                showDatePicker = false
-                            }
+                            onClick = { showDatePicker = false }
                         ) {
                             Text("确定")
                         }

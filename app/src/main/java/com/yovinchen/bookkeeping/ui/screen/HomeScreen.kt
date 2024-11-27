@@ -5,6 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -16,8 +19,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.TransactionType
@@ -57,8 +62,7 @@ fun HomeScreen(
                 .background(MaterialTheme.colorScheme.background)
         ) {
             // 顶部统计信息
-            MonthlyStatistics(
-                totalIncome = totalIncome,
+            MonthlyStatistics(totalIncome = totalIncome,
                 totalExpense = totalExpense,
                 onIncomeClick = { viewModel.setSelectedRecordType(TransactionType.INCOME) },
                 onExpenseClick = { viewModel.setSelectedRecordType(TransactionType.EXPENSE) },
@@ -66,8 +70,8 @@ fun HomeScreen(
                 onClearFilter = { viewModel.setSelectedRecordType(null) },
                 selectedMonth = selectedMonth,
                 onPreviousMonth = { viewModel.setSelectedMonth(selectedMonth.minusMonths(1)) },
-                onNextMonth = { viewModel.setSelectedMonth(selectedMonth.plusMonths(1)) }
-            )
+                onNextMonth = { viewModel.setSelectedMonth(selectedMonth.plusMonths(1)) },
+                onMonthSelected = { viewModel.setSelectedMonth(it) })
 
             // 记录列表
             LazyColumn(
@@ -155,11 +159,10 @@ fun HomeScreen(
         if (showAddDialog) {
             val selectedDateTime by viewModel.selectedDateTime.collectAsState()
             val selectedCategoryType by viewModel.selectedCategoryType.collectAsState()
-            AddRecordDialog(
-                onDismiss = { 
-                    showAddDialog = false 
-                    viewModel.resetSelectedDateTime()
-                },
+            AddRecordDialog(onDismiss = {
+                showAddDialog = false
+                viewModel.resetSelectedDateTime()
+            },
                 onConfirm = { type, amount, category, description ->
                     viewModel.addRecord(type, amount, category, description)
                     showAddDialog = false
@@ -174,15 +177,116 @@ fun HomeScreen(
 
         // 编辑记录对话框
         selectedRecord?.let { record ->
-            RecordEditDialog(
-                record = record,
+            RecordEditDialog(record = record,
                 categories = categories,
                 onDismiss = { selectedRecord = null },
                 onConfirm = { updatedRecord ->
                     viewModel.updateRecord(updatedRecord)
                     selectedRecord = null
+                })
+        }
+    }
+}
+
+@Composable
+fun MonthYearPickerDialog(
+    selectedMonth: YearMonth, onMonthSelected: (YearMonth) -> Unit, onDismiss: () -> Unit
+) {
+    var currentYearMonth by remember { mutableStateOf(selectedMonth) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(),
+            shape = MaterialTheme.shapes.extraLarge,
+            tonalElevation = 6.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    text = "选择年月",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                // 年份选择
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = {
+                        currentYearMonth = currentYearMonth.minusYears(1)
+                    }) {
+                        Text("<")
+                    }
+                    Text(
+                        text = "${currentYearMonth.year}年",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    IconButton(onClick = {
+                        currentYearMonth = currentYearMonth.plusYears(1)
+                    }) {
+                        Text(">")
+                    }
                 }
-            )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 月份网格
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3), modifier = Modifier.height(200.dp)
+                ) {
+                    items(12) { index ->
+                        val month = index + 1
+                        val isSelected = month == currentYearMonth.monthValue
+
+                        Surface(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .aspectRatio(1.5f)
+                                .clickable {
+                                    currentYearMonth = YearMonth.of(currentYearMonth.year, month)
+                                },
+                            shape = MaterialTheme.shapes.small,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surface
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                Text(
+                                    text = "${month}月",
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                    else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 按钮行
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("取消")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = {
+                        onMonthSelected(currentYearMonth)
+                        onDismiss()
+                    }) {
+                        Text("确定")
+                    }
+                }
+            }
         }
     }
 }
@@ -198,8 +302,11 @@ fun MonthlyStatistics(
     selectedMonth: YearMonth,
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
+    onMonthSelected: (YearMonth) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showMonthPicker by remember { mutableStateOf(false) }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -220,12 +327,11 @@ fun MonthlyStatistics(
                 IconButton(onClick = onPreviousMonth) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "上个月")
                 }
-                
-                Text(
-                    text = "${selectedMonth.year}年${selectedMonth.monthValue}月",
-                    style = MaterialTheme.typography.titleLarge
-                )
-                
+
+                Text(text = "${selectedMonth.year}年${selectedMonth.monthValue}月",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.clickable { showMonthPicker = true })
+
                 IconButton(onClick = onNextMonth) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "下个月")
                 }
@@ -234,8 +340,7 @@ fun MonthlyStatistics(
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 // 收入统计
                 Column(modifier = Modifier
@@ -243,13 +348,11 @@ fun MonthlyStatistics(
                     .clickable { onIncomeClick() }
                     .background(
                         if (selectedType == TransactionType.INCOME) MaterialTheme.colorScheme.primaryContainer
-                        else Color.Transparent,
-                        RoundedCornerShape(8.dp)
+                        else Color.Transparent, RoundedCornerShape(8.dp)
                     )
                     .padding(8.dp)) {
                     Text(
-                        text = "收入",
-                        style = MaterialTheme.typography.titleMedium
+                        text = "收入", style = MaterialTheme.typography.titleMedium
                     )
                     Text(
                         text = "¥${String.format("%.2f", totalIncome)}",
@@ -266,13 +369,11 @@ fun MonthlyStatistics(
                     .clickable { onExpenseClick() }
                     .background(
                         if (selectedType == TransactionType.EXPENSE) MaterialTheme.colorScheme.primaryContainer
-                        else Color.Transparent,
-                        RoundedCornerShape(8.dp)
+                        else Color.Transparent, RoundedCornerShape(8.dp)
                     )
                     .padding(8.dp)) {
                     Text(
-                        text = "支出",
-                        style = MaterialTheme.typography.titleMedium
+                        text = "支出", style = MaterialTheme.typography.titleMedium
                     )
                     Text(
                         text = "¥${String.format("%.2f", totalExpense)}",
@@ -284,13 +385,18 @@ fun MonthlyStatistics(
 
             if (selectedType != null) {
                 TextButton(
-                    onClick = onClearFilter,
-                    modifier = Modifier.align(Alignment.End)
+                    onClick = onClearFilter, modifier = Modifier.align(Alignment.End)
                 ) {
                     Text("清除筛选")
                 }
             }
         }
+    }
+
+    if (showMonthPicker) {
+        MonthYearPickerDialog(selectedMonth = selectedMonth,
+            onMonthSelected = onMonthSelected,
+            onDismiss = { showMonthPicker = false })
     }
 }
 
