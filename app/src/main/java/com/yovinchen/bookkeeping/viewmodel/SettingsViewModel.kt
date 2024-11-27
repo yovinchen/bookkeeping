@@ -6,9 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
 import com.yovinchen.bookkeeping.model.Category
 import com.yovinchen.bookkeeping.model.TransactionType
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
     private val database = BookkeepingDatabase.getDatabase(application)
     private val dao = database.bookkeepingDao()
