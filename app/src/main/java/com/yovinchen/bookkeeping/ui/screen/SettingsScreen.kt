@@ -14,6 +14,8 @@ import com.yovinchen.bookkeeping.model.TransactionType
 import com.yovinchen.bookkeeping.ui.components.ColorPicker
 import com.yovinchen.bookkeeping.ui.components.predefinedColors
 import com.yovinchen.bookkeeping.ui.dialog.CategoryManagementDialog
+import com.yovinchen.bookkeeping.ui.dialog.MemberManagementDialog
+import com.yovinchen.bookkeeping.viewmodel.MemberViewModel
 import com.yovinchen.bookkeeping.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -21,15 +23,27 @@ import com.yovinchen.bookkeeping.viewmodel.SettingsViewModel
 fun SettingsScreen(
     currentTheme: ThemeMode,
     onThemeChange: (ThemeMode) -> Unit,
-    viewModel: SettingsViewModel = viewModel()
+    viewModel: SettingsViewModel = viewModel(),
+    memberViewModel: MemberViewModel = viewModel()
 ) {
     var showThemeDialog by remember { mutableStateOf(false) }
     var showCategoryDialog by remember { mutableStateOf(false) }
+    var showMemberDialog by remember { mutableStateOf(false) }
     
     val categories by viewModel.categories.collectAsState()
     val selectedType by viewModel.selectedCategoryType.collectAsState()
+    val members by memberViewModel.allMembers.collectAsState(initial = emptyList())
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // 成员管理设置项
+        ListItem(
+            headlineContent = { Text("成员管理") },
+            supportingContent = { Text("管理账本成员") },
+            modifier = Modifier.clickable { showMemberDialog = true }
+        )
+
+        Divider()
+
         // 类别管理设置项
         ListItem(
             headlineContent = { Text("类别管理") },
@@ -129,6 +143,19 @@ fun SettingsScreen(
             onUpdateCategory = viewModel::updateCategory,
             selectedType = selectedType,
             onTypeChange = viewModel::setSelectedCategoryType
+        )
+    }
+
+    // 成员管理对话框
+    if (showMemberDialog) {
+        MemberManagementDialog(
+            onDismiss = { showMemberDialog = false },
+            members = members,
+            onAddMember = memberViewModel::addMember,
+            onDeleteMember = memberViewModel::deleteMember,
+            onUpdateMember = { member, name, description ->
+                memberViewModel.updateMember(member.copy(name = name, description = description))
+            }
         )
     }
 }
