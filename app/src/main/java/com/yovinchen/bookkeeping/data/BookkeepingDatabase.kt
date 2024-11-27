@@ -138,7 +138,7 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                         BookkeepingDatabase::class.java,
                         "bookkeeping_database"
                     )
-                    .addCallback(object : RoomDatabase.Callback() {
+                    .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
                             Log.d(TAG, "Database created, initializing default categories")
