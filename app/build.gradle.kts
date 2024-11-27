@@ -4,6 +4,10 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import com.android.build.api.variant.FilterConfiguration
+
 android {
     namespace = "com.yovinchen.bookkeeping"
     compileSdk = 34
@@ -13,7 +17,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -23,19 +27,37 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug") // 使用debug签名，实际发布时应该使用正式的签名配置
         }
     }
+    
+    applicationVariants.all {
+        val variant = this
+        variant.outputs
+            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
+            .forEach { output ->
+                // 获取当前时间
+                val date = SimpleDateFormat("yyyyMMdd_HHmm").format(Date())
+                // 获取CPU架构，如果没有则使用universal
+                val buildType = variant.buildType.name
+                // 构建文件名
+                val outputFileName = "轻记账_${buildType}_v${variant.versionName}_${date}.apk"
+                output.outputFileName = outputFileName
+            }
+    }
+    
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
     buildFeatures {
         compose = true
