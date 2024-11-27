@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.Category
+import com.yovinchen.bookkeeping.model.Member
 import com.yovinchen.bookkeeping.model.TransactionType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -14,37 +15,39 @@ import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.YearMonth
-import java.util.Date
-import java.util.Calendar
+import java.util.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val TAG = "HomeViewModel"
-    private val dao = BookkeepingDatabase.getDatabase(application).bookkeepingDao()
+    private val bookkeepingDao = BookkeepingDatabase.getDatabase(application).bookkeepingDao()
+    private val memberDao = BookkeepingDatabase.getDatabase(application).memberDao()
+    private val categoryDao = BookkeepingDatabase.getDatabase(application).categoryDao()
 
     private val _selectedRecordType = MutableStateFlow<TransactionType?>(null)
     val selectedRecordType: StateFlow<TransactionType?> = _selectedRecordType.asStateFlow()
 
-    private val _selectedDateTime = MutableStateFlow(LocalDateTime.now())
-    val selectedDateTime: StateFlow<LocalDateTime> = _selectedDateTime.asStateFlow()
-
-    private val _selectedCategoryType = MutableStateFlow(TransactionType.EXPENSE)
-    val selectedCategoryType: StateFlow<TransactionType> = _selectedCategoryType.asStateFlow()
-
     private val _selectedMonth = MutableStateFlow(YearMonth.now())
     val selectedMonth: StateFlow<YearMonth> = _selectedMonth.asStateFlow()
 
-    private val records = dao.getAllRecords()
+    private val _selectedMember = MutableStateFlow<Member?>(null)
+    val selectedMember: StateFlow<Member?> = _selectedMember.asStateFlow()
+
+    val members = memberDao.getAllMembers()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    val categories: StateFlow<List<Category>> = _selectedCategoryType
-        .flatMapLatest { type ->
-            dao.getCategoriesByType(type)
-        }
+    val categories = categoryDao.getAllCategories()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    private val allRecords = bookkeepingDao.getAllRecords()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -52,26 +55,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         )
 
     val filteredRecords = combine(
-        records,
+        allRecords,
         _selectedRecordType,
-        _selectedMonth
-    ) { records, selectedType, selectedMonth ->
+        _selectedMonth,
+        _selectedMember
+    ) { records, selectedType, selectedMonth, selectedMember ->
         records
             .filter { record ->
                 val recordDate = record.date.toInstant()
                     .atZone(ZoneId.systemDefault())
                     .toLocalDate()
                 val recordYearMonth = YearMonth.from(recordDate)
-                
+
                 val typeMatches = selectedType?.let { record.type == it } ?: true
                 val monthMatches = recordYearMonth == selectedMonth
-                
-                typeMatches && monthMatches
+                val memberMatches = selectedMember?.let { record.memberId == it.id } ?: true
+
+                monthMatches && memberMatches && typeMatches
             }
             .sortedByDescending { it.date }
             .groupBy { record ->
-                val calendar = Calendar.getInstance().apply { time = record.date }
-                calendar.apply {
+                Calendar.getInstance().apply { 
+                    time = record.date
                     set(Calendar.HOUR_OF_DAY, 0)
                     set(Calendar.MINUTE, 0)
                     set(Calendar.SECOND, 0)
@@ -79,15 +84,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 }.time
             }
     }.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        emptyMap()
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyMap()
     )
 
     val totalIncome = combine(
-        records,
-        _selectedMonth
-    ) { records, selectedMonth ->
+        allRecords,
+        _selectedMonth,
+        _selectedMember
+    ) { records, selectedMonth, selectedMember ->
         records
             .filter { record ->
                 val recordDate = record.date.toInstant()
@@ -95,19 +101,24 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     .toLocalDate()
                 val recordYearMonth = YearMonth.from(recordDate)
                 
-                record.type == TransactionType.INCOME && recordYearMonth == selectedMonth
+                val monthMatches = recordYearMonth == selectedMonth
+                val memberMatches = selectedMember?.let { record.memberId == it.id } ?: true
+                val typeMatches = record.type == TransactionType.INCOME
+
+                monthMatches && memberMatches && typeMatches
             }
             .sumOf { it.amount }
     }.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        0.0
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 0.0
     )
 
     val totalExpense = combine(
-        records,
-        _selectedMonth
-    ) { records, selectedMonth ->
+        allRecords,
+        _selectedMonth,
+        _selectedMember
+    ) { records, selectedMonth, selectedMember ->
         records
             .filter { record ->
                 val recordDate = record.date.toInstant()
@@ -115,111 +126,73 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     .toLocalDate()
                 val recordYearMonth = YearMonth.from(recordDate)
                 
-                record.type == TransactionType.EXPENSE && recordYearMonth == selectedMonth
+                val monthMatches = recordYearMonth == selectedMonth
+                val memberMatches = selectedMember?.let { record.memberId == it.id } ?: true
+                val typeMatches = record.type == TransactionType.EXPENSE
+
+                monthMatches && memberMatches && typeMatches
             }
             .sumOf { it.amount }
     }.stateIn(
-        viewModelScope,
-        SharingStarted.WhileSubscribed(5000),
-        0.0
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 0.0
     )
-
-    private fun updateTotals() {
-        // 移除未使用的参数
-    }
-
-    init {
-        viewModelScope.launch {
-            records.collect {
-                updateTotals()
-            }
-        }
-    }
-
-    fun addRecord(type: TransactionType, amount: Double, category: String, description: String) {
-        viewModelScope.launch {
-            val record = BookkeepingRecord(
-                amount = amount,
-                type = type,
-                category = category,
-                description = description,
-                date = Date.from(_selectedDateTime.value.atZone(ZoneId.systemDefault()).toInstant())
-            )
-            dao.insertRecord(record)
-            resetSelectedDateTime()
-        }
-    }
-
-    fun setSelectedDateTime(dateTime: LocalDateTime) {
-        _selectedDateTime.value = dateTime
-    }
-
-    fun setSelectedRecordType(type: TransactionType?) {
-        _selectedRecordType.value = type
-    }
-
-    fun setSelectedCategoryType(type: TransactionType) {
-        _selectedCategoryType.value = type
-    }
 
     fun setSelectedMonth(yearMonth: YearMonth) {
         _selectedMonth.value = yearMonth
     }
 
+    fun setSelectedMember(member: Member?) {
+        _selectedMember.value = member
+    }
+
     fun moveMonth(forward: Boolean) {
-        val current = _selectedMonth.value
         _selectedMonth.value = if (forward) {
-            current.plusMonths(1)
+            _selectedMonth.value.plusMonths(1)
         } else {
-            current.minusMonths(1)
+            _selectedMonth.value.minusMonths(1)
         }
     }
 
-    fun resetSelectedDateTime() {
-        _selectedDateTime.value = LocalDateTime.now()
+    suspend fun getMemberById(memberId: Int): Member? {
+        return memberDao.getMemberById(memberId)
+    }
+
+    fun addRecord(
+        amount: Double,
+        category: String,
+        description: String,
+        date: Date,
+        type: TransactionType,
+        memberId: Int?
+    ) {
+        viewModelScope.launch {
+            val record = BookkeepingRecord(
+                type = type,
+                amount = amount,
+                category = category,
+                description = description,
+                date = date,
+                memberId = memberId
+            )
+            bookkeepingDao.insertRecord(record)
+        }
     }
 
     fun updateRecord(record: BookkeepingRecord) {
         viewModelScope.launch {
-            dao.updateRecord(record)
+            bookkeepingDao.updateRecord(record)
         }
     }
 
     fun deleteRecord(record: BookkeepingRecord) {
         viewModelScope.launch {
-            dao.deleteRecord(record)
+            bookkeepingDao.deleteRecord(record)
         }
     }
 
-    // 获取指定日期的记录
-    fun getRecordsByDate(date: LocalDateTime): Flow<List<BookkeepingRecord>> {
-        val calendar = Calendar.getInstance().apply {
-            time = Date.from(date.atZone(ZoneId.systemDefault()).toInstant())
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val startOfDay = calendar.time
-        calendar.add(Calendar.DAY_OF_MONTH, 1)
-        val endOfDay = calendar.time
-        return dao.getRecordsByDateRange(startOfDay, endOfDay)
-    }
-
-    // 获取指定日期范围的记录
-    fun getRecordsByDateRange(startDate: LocalDateTime, endDate: LocalDateTime): Flow<List<BookkeepingRecord>> {
-        val start = Date.from(startDate.atZone(ZoneId.systemDefault()).toInstant())
-        val end = Date.from(endDate.atZone(ZoneId.systemDefault()).toInstant())
-        return dao.getRecordsByDateRange(start, end)
-    }
-
-    // 获取指定类型的记录
-    fun getRecordsByType(type: TransactionType): Flow<List<BookkeepingRecord>> {
-        return dao.getRecordsByType(type)
+    fun setSelectedRecordType(type: TransactionType?) {
+        _selectedRecordType.value = type
     }
 }
-
-data class UiState(
-    val isAddingRecord: Boolean = false,
-    val isManagingCategories: Boolean = false
-)
