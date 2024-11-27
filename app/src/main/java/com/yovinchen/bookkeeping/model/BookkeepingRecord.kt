@@ -2,6 +2,7 @@ package com.yovinchen.bookkeeping.model
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
@@ -43,6 +44,9 @@ class Converters {
             childColumns = ["memberId"],
             onDelete = ForeignKey.SET_NULL
         )
+    ],
+    indices = [
+        Index(value = ["memberId"])
     ]
 )
 @TypeConverters(Converters::class)
