@@ -22,9 +22,7 @@ import java.time.YearMonth
 
 @Composable
 fun MonthYearPickerDialog(
-    selectedMonth: YearMonth,
-    onMonthSelected: (YearMonth) -> Unit,
-    onDismiss: () -> Unit
+    selectedMonth: YearMonth, onMonthSelected: (YearMonth) -> Unit, onDismiss: () -> Unit
 ) {
     var currentYearMonth by remember { mutableStateOf(selectedMonth) }
 
@@ -71,8 +69,7 @@ fun MonthYearPickerDialog(
 
                 // 月份网格
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(3),
-                    modifier = Modifier.height(200.dp)
+                    columns = GridCells.Fixed(3), modifier = Modifier.height(200.dp)
                 ) {
                     items(12) { index ->
                         val month = index + 1
@@ -163,11 +160,9 @@ fun MonthlyStatistics(
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "上个月")
                 }
 
-                Text(
-                    text = "${selectedMonth.year}年${selectedMonth.monthValue}月",
+                Text(text = "${selectedMonth.year}年${selectedMonth.monthValue}月",
                     style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.clickable { showMonthPicker = true }
-                )
+                    modifier = Modifier.clickable { showMonthPicker = true })
 
                 IconButton(onClick = onNextMonth) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "下个月")
@@ -177,24 +172,38 @@ fun MonthlyStatistics(
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // 收入统计
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onIncomeClick() }
-                        .background(
-                            if (selectedType == TransactionType.INCOME) MaterialTheme.colorScheme.primaryContainer
-                            else Color.Transparent,
-                            RoundedCornerShape(8.dp)
-                        )
-                        .padding(8.dp)
-                ) {
+                // 支出统计
+                Column(modifier = Modifier
+                    .weight(1f)
+                    .clickable { onExpenseClick() }
+                    .background(
+                        if (selectedType == TransactionType.EXPENSE) MaterialTheme.colorScheme.primaryContainer
+                        else Color.Transparent, RoundedCornerShape(8.dp)
+                    )
+                    .padding(8.dp)) {
                     Text(
-                        text = "收入",
-                        style = MaterialTheme.typography.titleMedium
+                        text = "支出", style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "¥${String.format("%.2f", totalExpense)}",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                // 收入统计
+                Column(modifier = Modifier
+                    .weight(1f)
+                    .clickable { onIncomeClick() }
+                    .background(
+                        if (selectedType == TransactionType.INCOME) MaterialTheme.colorScheme.primaryContainer
+                        else Color.Transparent, RoundedCornerShape(8.dp)
+                    )
+                    .padding(8.dp)) {
+                    Text(
+                        text = "收入", style = MaterialTheme.typography.titleMedium
                     )
                     Text(
                         text = "¥${String.format("%.2f", totalIncome)}",
@@ -204,35 +213,30 @@ fun MonthlyStatistics(
                 }
 
                 Spacer(modifier = Modifier.width(16.dp))
-
-                // 支出统计
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onExpenseClick() }
-                        .background(
-                            if (selectedType == TransactionType.EXPENSE) MaterialTheme.colorScheme.primaryContainer
-                            else Color.Transparent,
-                            RoundedCornerShape(8.dp)
-                        )
-                        .padding(8.dp)
-                ) {
+                // 结余统计
+                Column(modifier = Modifier
+                    .weight(1f)
+                    .clickable { onClearFilter() }
+                    .background(
+                        if (selectedType == TransactionType.INCOME) MaterialTheme.colorScheme.primaryContainer
+                        else Color.Transparent, RoundedCornerShape(8.dp)
+                    )
+                    .padding(8.dp)) {
                     Text(
-                        text = "支出",
-                        style = MaterialTheme.typography.titleMedium
+                        text = "结余", style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        text = "¥${String.format("%.2f", totalExpense)}",
+                        text = "¥${String.format("%.2f", totalIncome - totalExpense)}",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.error
+                        color = if (totalIncome >= totalExpense) MaterialTheme.colorScheme.tertiary
+                        else MaterialTheme.colorScheme.error
                     )
                 }
             }
 
             if (selectedType != null) {
                 TextButton(
-                    onClick = onClearFilter,
-                    modifier = Modifier.align(Alignment.End)
+                    onClick = onClearFilter, modifier = Modifier.align(Alignment.End)
                 ) {
                     Text("清除筛选")
                 }
@@ -241,10 +245,8 @@ fun MonthlyStatistics(
     }
 
     if (showMonthPicker) {
-        MonthYearPickerDialog(
-            selectedMonth = selectedMonth,
+        MonthYearPickerDialog(selectedMonth = selectedMonth,
             onMonthSelected = onMonthSelected,
-            onDismiss = { showMonthPicker = false }
-        )
+            onDismiss = { showMonthPicker = false })
     }
 }
