@@ -96,7 +96,7 @@ fun AnalysisScreen(
             when (selectedType) {
                 AnalysisType.EXPENSE, AnalysisType.INCOME -> {
                     Text(
-                        text = if (selectedType == AnalysisType.EXPENSE) "支出分析" else "收入分析",
+                        text = if (selectedType == AnalysisType.EXPENSE) "" else "",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
