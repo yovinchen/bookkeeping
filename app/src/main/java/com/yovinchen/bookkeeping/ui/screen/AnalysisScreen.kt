@@ -35,109 +35,115 @@ fun AnalysisScreen(
     val categoryStats by viewModel.categoryStats.collectAsState()
     var showMonthPicker by remember { mutableStateOf(false) }
 
-    Column(
+    LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
         // 月份选择器
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = {
-                viewModel.setSelectedMonth(selectedMonth.minusMonths(1))
-            }) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "上个月")
-            }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = {
+                    viewModel.setSelectedMonth(selectedMonth.minusMonths(1))
+                }) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "上个月")
+                }
 
-            Text(
-                text = "${selectedMonth.year}年${selectedMonth.monthValue}月",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.clickable { showMonthPicker = true }
-            )
-
-            IconButton(onClick = {
-                viewModel.setSelectedMonth(selectedMonth.plusMonths(1))
-            }) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "下个月")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 分析类型选择
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            AnalysisType.values().forEach { type ->
-                FilterChip(
-                    selected = selectedType == type,
-                    onClick = { viewModel.setAnalysisType(type) },
-                    label = {
-                        Text(
-                            when (type) {
-                                AnalysisType.EXPENSE -> "支出分析"
-                                AnalysisType.INCOME -> "收入分析"
-                                AnalysisType.TREND -> "收支趋势"
-                            }
-                        )
-                    }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 统计内容
-        when (selectedType) {
-            AnalysisType.EXPENSE, AnalysisType.INCOME -> {
                 Text(
-                    text = if (selectedType == AnalysisType.EXPENSE) "支出分析" else "收入分析",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
+                    text = "${selectedMonth.year}年${selectedMonth.monthValue}月",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.clickable { showMonthPicker = true }
                 )
 
-                if (categoryStats.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(300.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "暂无数据",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    // 添加饼图
-                    CategoryPieChart(
-                        categoryData = categoryStats.map { 
-                            it.category to it.amount.toFloat()
+                IconButton(onClick = {
+                    viewModel.setSelectedMonth(selectedMonth.plusMonths(1))
+                }) {
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "下个月")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 分析类型选择
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                AnalysisType.values().forEach { type ->
+                    FilterChip(
+                        selected = selectedType == type,
+                        onClick = { viewModel.setAnalysisType(type) },
+                        label = {
+                            Text(
+                                when (type) {
+                                    AnalysisType.EXPENSE -> "支出分析"
+                                    AnalysisType.INCOME -> "收入分析"
+                                    AnalysisType.TREND -> "收支趋势"
+                                }
+                            )
                         }
                     )
                 }
+            }
 
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                // 分类列表
-                LazyColumn {
-                    items(categoryStats) { stat ->
-                        CategoryStatItem(stat)
+            // 统计内容
+            when (selectedType) {
+                AnalysisType.EXPENSE, AnalysisType.INCOME -> {
+                    Text(
+                        text = if (selectedType == AnalysisType.EXPENSE) "支出分析" else "收入分析",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+
+                    if (categoryStats.isNotEmpty()) {
+                        val pieChartData = categoryStats.map { stat ->
+                            stat.category to stat.percentage.toFloat()
+                        }
+                        CategoryPieChart(
+                            categoryData = pieChartData,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp)
+                        )
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        Text(
+                            text = "分类明细",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(vertical = 8.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "暂无数据",
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp)
+                        )
                     }
                 }
+                AnalysisType.TREND -> {
+                    Text(
+                        text = "收支趋势分析（开发中）",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
             }
-            AnalysisType.TREND -> {
-                // TODO: 实现收支趋势图表
-                Text(
-                    text = "收支趋势",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
+        }
+
+        // 分类统计列表
+        if (selectedType != AnalysisType.TREND && categoryStats.isNotEmpty()) {
+            items(categoryStats) { stat ->
+                CategoryStatItem(stat)
             }
         }
     }
@@ -145,8 +151,8 @@ fun AnalysisScreen(
     if (showMonthPicker) {
         MonthYearPicker(
             selectedMonth = selectedMonth,
-            onMonthSelected = { yearMonth ->
-                viewModel.setSelectedMonth(yearMonth)
+            onMonthSelected = { month ->
+                viewModel.setSelectedMonth(month)
                 showMonthPicker = false
             },
             onDismiss = { showMonthPicker = false }
@@ -156,59 +162,51 @@ fun AnalysisScreen(
 
 @Composable
 fun CategoryStatItem(stat: CategoryStat) {
-    Card(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .padding(vertical = 8.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stat.category,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Text(
-                    text = String.format("%.1f%%", stat.percentage),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 进度条
-            LinearProgressIndicator(
-                progress = { (stat.percentage / 100).toFloat() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp),
+            Text(
+                text = stat.category,
+                style = MaterialTheme.typography.bodyLarge
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "¥${String.format("%.2f", stat.amount)}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = "${stat.count}笔",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.outline
-                )
-            }
+            Text(
+                text = String.format("%.2f", stat.amount),
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(4.dp))
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LinearProgressIndicator(
+                progress = stat.percentage.toFloat() / 100f,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(8.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant,
+                        RoundedCornerShape(4.dp)
+                    )
+            )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            Text(
+                text = String.format("%.1f%%", stat.percentage),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
