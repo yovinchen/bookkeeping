@@ -32,9 +32,9 @@ abstract class BookkeepingDatabase : RoomDatabase() {
         private const val TAG = "BookkeepingDatabase"
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
-            override fun migrate(database: SupportSQLiteDatabase) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 // 创建成员表
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE IF NOT EXISTS members (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         name TEXT NOT NULL,
@@ -43,20 +43,20 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                 """)
                 
                 // 插入默认成员
-                database.execSQL("""
+                db.execSQL("""
                     INSERT INTO members (name, description)
                     VALUES ('自己', '默认成员')
                 """)
 
                 // 修改记账记录表，添加成员ID字段
-                database.execSQL("""
+                db.execSQL("""
                     ALTER TABLE bookkeeping_records
                     ADD COLUMN memberId INTEGER DEFAULT NULL
                     REFERENCES members(id) ON DELETE SET NULL
                 """)
 
                 // 更新现有记录，将其关联到默认成员
-                database.execSQL("""
+                db.execSQL("""
                     UPDATE bookkeeping_records
                     SET memberId = (SELECT id FROM members WHERE name = '我自己')
                 """)
@@ -64,9 +64,9 @@ abstract class BookkeepingDatabase : RoomDatabase() {
         }
 
         private val MIGRATION_2_3 = object : Migration(2, 3) {
-            override fun migrate(database: SupportSQLiteDatabase) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 // 重新创建记账记录表
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE IF NOT EXISTS bookkeeping_records_new (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         amount REAL NOT NULL,
@@ -80,19 +80,19 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                 """)
 
                 // 复制数据
-                database.execSQL("""
+                db.execSQL("""
                     INSERT INTO bookkeeping_records_new (id, amount, type, category, description, date, memberId)
                     SELECT id, amount, type, category, description, date, memberId FROM bookkeeping_records
                 """)
 
                 // 删除旧表
-                database.execSQL("DROP TABLE bookkeeping_records")
+                db.execSQL("DROP TABLE bookkeeping_records")
 
                 // 重命名新表
-                database.execSQL("ALTER TABLE bookkeeping_records_new RENAME TO bookkeeping_records")
+                db.execSQL("ALTER TABLE bookkeeping_records_new RENAME TO bookkeeping_records")
 
                 // 重新创建分类表
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE IF NOT EXISTS categories_new (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         name TEXT NOT NULL,
@@ -101,16 +101,16 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                 """)
 
                 // 复制分类数据
-                database.execSQL("""
+                db.execSQL("""
                     INSERT INTO categories_new (id, name, type)
                     SELECT id, name, type FROM categories
                 """)
 
                 // 删除旧表
-                database.execSQL("DROP TABLE categories")
+                db.execSQL("DROP TABLE categories")
 
                 // 重命名新表
-                database.execSQL("ALTER TABLE categories_new RENAME TO categories")
+                db.execSQL("ALTER TABLE categories_new RENAME TO categories")
             }
         }
 
