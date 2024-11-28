@@ -27,7 +27,7 @@ fun CategoryPieChart(
     modifier: Modifier = Modifier,
     onCategoryClick: (String) -> Unit = {}
 ) {
-    val isDarkTheme = isSystemInDarkTheme()
+    isSystemInDarkTheme()
     val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
 
     AndroidView(
