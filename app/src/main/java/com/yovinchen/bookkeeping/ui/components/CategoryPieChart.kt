@@ -2,16 +2,14 @@ package com.yovinchen.bookkeeping.ui.components
 
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.github.mikephil.charting.charts.PieChart
-import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
@@ -24,11 +22,13 @@ import com.github.mikephil.charting.utils.ColorTemplate
 @Composable
 fun CategoryPieChart(
     categoryData: List<Pair<String, Float>>,
+    memberData: List<Pair<String, Float>>,
+    currentViewMode: Boolean = false, // false 为分类视图，true 为成员视图
     modifier: Modifier = Modifier,
     onCategoryClick: (String) -> Unit = {}
 ) {
-    isSystemInDarkTheme()
     val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
+    val data = if (currentViewMode) memberData else categoryData
 
     AndroidView(
         modifier = modifier
@@ -39,23 +39,15 @@ fun CategoryPieChart(
                 description.isEnabled = false
                 setUsePercentValues(true)
                 setDrawEntryLabels(true)
-
-                // 禁用图例显示
                 legend.isEnabled = false
-
                 isDrawHoleEnabled = true
                 holeRadius = 40f
                 setHoleColor(AndroidColor.TRANSPARENT)
                 setTransparentCircleRadius(45f)
-
-                // 设置标签文字颜色
                 setEntryLabelColor(textColor)
                 setEntryLabelTextSize(12f)
-
-                // 设置中心文字颜色跟随主题
                 setCenterTextColor(textColor)
 
-                // 添加点击事件监听器
                 setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
                     override fun onValueSelected(e: Entry?, h: Highlight?) {
                         e?.let {
@@ -65,18 +57,16 @@ fun CategoryPieChart(
                         }
                     }
 
-                    override fun onNothingSelected() {
-                        // 不需要处理
-                    }
+                    override fun onNothingSelected() {}
                 })
             }
         },
         update = { chart ->
-            val entries = categoryData.map { (category, amount) ->
-                PieEntry(amount, category)
+            val entries = data.map { (label, amount) ->
+                PieEntry(amount, label)
             }
 
-            val dataSet = PieDataSet(entries, "").apply {  // 将标题设为空字符串
+            val dataSet = PieDataSet(entries, "").apply {
                 colors = ColorTemplate.MATERIAL_COLORS.toList()
                 valueTextSize = 14f
                 valueFormatter = PercentFormatter(chart)

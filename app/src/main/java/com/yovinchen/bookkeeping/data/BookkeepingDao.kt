@@ -38,6 +38,17 @@ interface BookkeepingDao {
         yearMonth: String
     ): Flow<List<BookkeepingRecord>>
 
+    @Query("""
+        SELECT * FROM bookkeeping_records 
+        WHERE memberId IN (SELECT id FROM members WHERE name = :memberName)
+        AND strftime('%Y-%m', datetime(date/1000, 'unixepoch')) = :yearMonth
+        ORDER BY date DESC
+    """)
+    fun getRecordsByMemberAndMonth(
+        memberName: String,
+        yearMonth: String
+    ): Flow<List<BookkeepingRecord>>
+
     @Insert
     suspend fun insertRecord(record: BookkeepingRecord): Long
 
