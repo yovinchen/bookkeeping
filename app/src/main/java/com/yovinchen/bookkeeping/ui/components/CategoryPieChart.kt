@@ -36,16 +36,8 @@ fun CategoryPieChart(
                 setUsePercentValues(true)
                 setDrawEntryLabels(true)
                 
-                // 配置图例
-                legend.apply {
-                    isEnabled = true
-                    this.textColor = textColor  // 使用Material Theme的文字颜色
-                    textSize = 12f
-                    form = Legend.LegendForm.CIRCLE
-                    formSize = 12f
-                    formToTextSpace = 8f
-                    xEntrySpace = 16f
-                }
+                // 禁用图例显示
+                legend.isEnabled = false
                 
                 isDrawHoleEnabled = true
                 holeRadius = 40f
@@ -65,7 +57,7 @@ fun CategoryPieChart(
                 PieEntry(amount, category)
             }
 
-            val dataSet = PieDataSet(entries, "分类占比").apply {
+            val dataSet = PieDataSet(entries, "").apply {  // 将标题设为空字符串
                 colors = ColorTemplate.MATERIAL_COLORS.toList()
                 valueTextSize = 14f
                 valueFormatter = PercentFormatter(chart)
