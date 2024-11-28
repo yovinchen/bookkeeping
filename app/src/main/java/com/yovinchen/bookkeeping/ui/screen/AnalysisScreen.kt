@@ -70,22 +70,28 @@ fun AnalysisScreen(
                 }
             }
 
-            // 饼图
-            if (selectedAnalysisType != AnalysisType.TREND) {
-                CategoryPieChart(
-                    categoryData = categoryStats.map { Pair(it.category, it.percentage.toFloat()) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .padding(16.dp)
-                )
-            }
-
-            // 分类统计列表
+            // 使用LazyColumn包含饼图和列表
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp)
             ) {
+                // 添加饼图作为第一个项目
+                if (selectedAnalysisType != AnalysisType.TREND) {
+                    item {
+                        CategoryPieChart(
+                            categoryData = categoryStats.map { Pair(it.category, it.percentage.toFloat()) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .padding(bottom = 16.dp),
+                            onCategoryClick = { category ->
+                                onNavigateToCategoryDetail(category, selectedMonth)
+                            }
+                        )
+                    }
+                }
+
+                // 添加分类统计列表项目
                 items(categoryStats) { stat ->
                     CategoryStatItem(
                         stat = stat,

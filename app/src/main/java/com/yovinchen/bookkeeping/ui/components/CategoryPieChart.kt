@@ -12,16 +12,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.components.Legend
+import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.PercentFormatter
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import com.github.mikephil.charting.utils.ColorTemplate
 
 @Composable
 fun CategoryPieChart(
     categoryData: List<Pair<String, Float>>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCategoryClick: (String) -> Unit = {}
 ) {
     val isDarkTheme = isSystemInDarkTheme()
     val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
@@ -50,6 +54,21 @@ fun CategoryPieChart(
 
                 // 设置中心文字颜色跟随主题
                 setCenterTextColor(textColor)
+
+                // 添加点击事件监听器
+                setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
+                    override fun onValueSelected(e: Entry?, h: Highlight?) {
+                        e?.let {
+                            if (it is PieEntry) {
+                                onCategoryClick(it.label ?: return)
+                            }
+                        }
+                    }
+
+                    override fun onNothingSelected() {
+                        // 不需要处理
+                    }
+                })
             }
         },
         update = { chart ->
