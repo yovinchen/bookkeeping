@@ -4,138 +4,131 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
+import com.yovinchen.bookkeeping.ui.components.CategoryPieChart
 import com.yovinchen.bookkeeping.ui.components.RecordItem
 import com.yovinchen.bookkeeping.viewmodel.CategoryDetailViewModel
 import com.yovinchen.bookkeeping.viewmodel.CategoryDetailViewModelFactory
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.Locale
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryDetailScreen(
     category: String,
-    month: YearMonth,
-    onBack: () -> Unit
+    yearMonth: YearMonth,
+    onNavigateBack: () -> Unit,
+    onNavigateToMemberDetail: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val database = remember { BookkeepingDatabase.getDatabase(context) }
     val viewModel: CategoryDetailViewModel = viewModel(
-        factory = CategoryDetailViewModelFactory(database, category, month)
+        factory = CategoryDetailViewModelFactory(database, category, yearMonth)
     )
 
     val records by viewModel.records.collectAsState()
+    val memberStats by viewModel.memberStats.collectAsState()
     val total by viewModel.total.collectAsState()
-    val members by viewModel.members.collectAsState()
-    val groupedRecords = remember(records) {
-        records.groupBy { record ->
-            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(record.date)
-        }
-    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("$category - ${month.format(DateTimeFormatter.ofPattern("yyyy年MM月"))}") },
+                title = { Text(category) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                     }
                 }
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
+        LazyColumn(
+            modifier = modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 总金额显示
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "总金额",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = String.format("%.2f", total),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                }
+            item {
+                Text(
+                    text = NumberFormat.getCurrencyInstance(Locale.CHINA).format(total),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.padding(16.dp)
+                )
             }
 
-            // 记录列表
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                groupedRecords.forEach { (date, dayRecords) ->
-                    item {
-                        Card(
+            item {
+                CategoryPieChart(
+                    categoryData = memberStats.map { Pair(it.category, it.percentage.toFloat()) },
+                    memberData = emptyList(),
+                    currentViewMode = false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    onCategoryClick = { memberName -> onNavigateToMemberDetail(memberName) }
+                )
+            }
+
+            // 按日期分组记录
+            val groupedRecords = records.groupBy { record ->
+                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(record.date)
+            }.toSortedMap(compareByDescending { it })
+
+            groupedRecords.forEach { (date, dayRecords) ->
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                .padding(16.dp)
                         ) {
-                            Column(
+                            // 日期标题和总金额
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp)
+                                    .padding(bottom = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                // 日期标签
                                 Text(
-                                    text = SimpleDateFormat(
-                                        "yyyy年MM月dd日 E",
-                                        Locale.CHINESE
-                                    ).format(dayRecords.first().date),
+                                    text = date,
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    fontWeight = FontWeight.Bold
                                 )
+                                Text(
+                                    text = NumberFormat.getCurrencyInstance(Locale.CHINA)
+                                        .format(dayRecords.sumOf { it.amount }),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                                // 当天的记录
-                                Column(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    dayRecords.forEachIndexed { index, record ->
-                                        RecordItem(
-                                            record = record,
-                                            onClick = {},
-                                            members = members
-                                        )
-
-                                        if (index < dayRecords.size - 1) {
-                                            HorizontalDivider(
-                                                modifier = Modifier.padding(vertical = 4.dp),
-                                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                                thickness = 0.5.dp
-                                            )
-                                        }
-                                    }
+                            // 当天的记录列表
+                            dayRecords.forEach { record ->
+                                RecordItem(record = record)
+                                if (record != dayRecords.last()) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(vertical = 8.dp),
+                                        color = MaterialTheme.colorScheme.outlineVariant
+                                    )
                                 }
                             }
                         }
@@ -143,5 +136,45 @@ fun CategoryDetailScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun RecordItem(
+    record: BookkeepingRecord,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = record.memberId.toString(),  // 暂时显示 memberId，后续可以通过 MemberDao 获取成员名称
+                style = MaterialTheme.typography.titleMedium
+            )
+            if (record.description.isNotBlank()) {
+                Text(
+                    text = record.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(record.date),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Text(
+            text = NumberFormat.getCurrencyInstance(Locale.CHINA).format(record.amount),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.error
+        )
     }
 }

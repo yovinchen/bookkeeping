@@ -3,6 +3,7 @@ package com.yovinchen.bookkeeping.data
 import androidx.room.*
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.Category
+import com.yovinchen.bookkeeping.model.CategoryStat
 import com.yovinchen.bookkeeping.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
@@ -49,6 +50,37 @@ interface BookkeepingDao {
         yearMonth: String
     ): Flow<List<BookkeepingRecord>>
 
+    @Query("""
+        SELECT m.name as category, 
+        SUM(r.amount) as amount,
+        COUNT(*) as count,
+        (SUM(r.amount) * 100.0 / (
+            SELECT SUM(amount) 
+            FROM bookkeeping_records 
+            WHERE category = :category 
+            AND strftime('%Y-%m', datetime(date/1000, 'unixepoch')) = :yearMonth
+        )) as percentage
+        FROM bookkeeping_records r
+        JOIN members m ON r.memberId = m.id
+        WHERE r.category = :category
+        AND strftime('%Y-%m', datetime(r.date/1000, 'unixepoch')) = :yearMonth
+        GROUP BY m.name
+        ORDER BY amount DESC
+    """)
+    fun getMemberStatsByCategory(
+        category: String,
+        yearMonth: String
+    ): Flow<List<CategoryStat>>
+
+    @Query("""
+        SELECT * FROM bookkeeping_records 
+        WHERE category = :category
+        ORDER BY date DESC
+    """)
+    fun getRecordsByCategory(
+        category: String
+    ): Flow<List<BookkeepingRecord>>
+
     @Insert
     suspend fun insertRecord(record: BookkeepingRecord): Long
 
@@ -75,4 +107,18 @@ interface BookkeepingDao {
 
     @Query("UPDATE bookkeeping_records SET category = :newName WHERE category = :oldName")
     suspend fun updateRecordCategories(oldName: String, newName: String)
+
+    @Query("""
+        SELECT * FROM bookkeeping_records 
+        WHERE memberId IN (SELECT id FROM members WHERE name = :memberName)
+        AND category = :category
+        AND date BETWEEN :startDate AND :endDate
+        ORDER BY date DESC
+    """)
+    suspend fun getRecordsByMemberAndCategory(
+        memberName: String,
+        category: String,
+        startDate: Date,
+        endDate: Date
+    ): List<BookkeepingRecord>
 }

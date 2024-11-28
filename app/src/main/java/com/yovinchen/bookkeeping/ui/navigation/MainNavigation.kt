@@ -2,11 +2,9 @@ package com.yovinchen.bookkeeping.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Analytics
-import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -31,27 +29,25 @@ import java.time.format.DateTimeFormatter
 
 sealed class Screen(
     val route: String,
-    val icon: ImageVector? = null,
-    val label: String? = null
+    val title: String,
+    val icon: ImageVector? = null
 ) {
-    data object Home : Screen("home", Icons.Outlined.Home, "首页")
-    data object Analysis : Screen("analysis", Icons.Outlined.Analytics, "分析")
-    data object Settings : Screen("settings", Icons.Default.Settings, "设置")
-    data object CategoryDetail : Screen(
-        "category/{category}/{yearMonth}",
-        Icons.Default.List,
-        "分类详情"
-    ) {
-        fun createRoute(category: String, yearMonth: YearMonth): String =
-            "category/$category/${yearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}"
+    object Home : Screen("home", "记账", Icons.AutoMirrored.Filled.List)
+    object Analysis : Screen("analysis", "分析", Icons.Default.Analytics)
+    object Settings : Screen("settings", "设置", Icons.Default.Settings)
+    object CategoryDetail : Screen("category_detail/{category}/{yearMonth}", "分类详情") {
+        fun createRoute(category: String, yearMonth: YearMonth): String {
+            return "category_detail/$category/${yearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}"
+        }
     }
-    data object MemberDetail : Screen(
-        "member/{memberName}/{yearMonth}",
-        Icons.Default.List,
-        "成员详情"
-    ) {
-        fun createRoute(memberName: String, yearMonth: YearMonth): String =
-            "member/$memberName/${yearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}"
+    object MemberDetail : Screen("member_detail/{memberName}/{category}/{yearMonth}", "成员详情") {
+        fun createRoute(memberName: String, category: String, yearMonth: YearMonth): String {
+            return "member_detail/$memberName/$category/${yearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}"
+        }
+    }
+
+    companion object {
+        fun bottomNavigationItems() = listOf(Home, Analysis, Settings)
     }
 }
 
@@ -69,14 +65,10 @@ fun MainNavigation(
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
-                listOf(
-                    Screen.Home,
-                    Screen.Analysis,
-                    Screen.Settings
-                ).forEach { screen ->
+                Screen.bottomNavigationItems().forEach { screen ->
                     NavigationBarItem(
-                        icon = { Icon(screen.icon!!, contentDescription = screen.label) },
-                        label = { Text(screen.label!!) },
+                        icon = { Icon(screen.icon!!, contentDescription = screen.title) },
+                        label = { Text(screen.title) },
                         selected = currentRoute == screen.route,
                         onClick = {
                             navController.navigate(screen.route) {
@@ -105,7 +97,9 @@ fun MainNavigation(
                         navController.navigate(Screen.CategoryDetail.createRoute(category, yearMonth))
                     },
                     onNavigateToMemberDetail = { memberName, yearMonth ->
-                        navController.navigate(Screen.MemberDetail.createRoute(memberName, yearMonth))
+                        // 在这里我们暂时使用一个默认分类，你需要根据实际情况修改这里的逻辑
+                        val defaultCategory = "默认"
+                        navController.navigate(Screen.MemberDetail.createRoute(memberName, defaultCategory, yearMonth))
                     }
                 )
             }
@@ -126,11 +120,15 @@ fun MainNavigation(
             ) { backStackEntry ->
                 val category = backStackEntry.arguments?.getString("category") ?: return@composable
                 val yearMonthStr = backStackEntry.arguments?.getString("yearMonth") ?: return@composable
-                val yearMonth = YearMonth.parse(yearMonthStr, DateTimeFormatter.ofPattern("yyyy-MM"))
+                val yearMonth = YearMonth.parse(yearMonthStr)
+
                 CategoryDetailScreen(
                     category = category,
-                    month = yearMonth,
-                    onBack = { navController.popBackStack() }
+                    yearMonth = yearMonth,
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateToMemberDetail = { memberName ->
+                        navController.navigate(Screen.MemberDetail.createRoute(memberName, category, yearMonth))
+                    }
                 )
             }
 
@@ -138,14 +136,18 @@ fun MainNavigation(
                 route = Screen.MemberDetail.route,
                 arguments = listOf(
                     navArgument("memberName") { type = NavType.StringType },
+                    navArgument("category") { type = NavType.StringType },
                     navArgument("yearMonth") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
                 val memberName = backStackEntry.arguments?.getString("memberName") ?: return@composable
+                val category = backStackEntry.arguments?.getString("category") ?: return@composable
                 val yearMonthStr = backStackEntry.arguments?.getString("yearMonth") ?: return@composable
-                val yearMonth = YearMonth.parse(yearMonthStr, DateTimeFormatter.ofPattern("yyyy-MM"))
+                val yearMonth = YearMonth.parse(yearMonthStr)
+
                 MemberDetailScreen(
                     memberName = memberName,
+                    category = category,
                     yearMonth = yearMonth,
                     onNavigateBack = { navController.popBackStack() }
                 )

@@ -2,7 +2,6 @@ package com.yovinchen.bookkeeping.ui.screen
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -12,7 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.yovinchen.bookkeeping.model.BookkeepingRecord
+import com.yovinchen.bookkeeping.data.Record
+import com.yovinchen.bookkeeping.ui.components.RecordItem
 import com.yovinchen.bookkeeping.viewmodel.MemberDetailViewModel
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -24,6 +24,7 @@ import java.util.*
 @Composable
 fun MemberDetailScreen(
     memberName: String,
+    category: String,
     yearMonth: YearMonth,
     onNavigateBack: () -> Unit,
     viewModel: MemberDetailViewModel = viewModel()
@@ -31,8 +32,8 @@ fun MemberDetailScreen(
     val records by viewModel.memberRecords.collectAsState(initial = emptyList())
     val totalAmount by viewModel.totalAmount.collectAsState(initial = 0.0)
     
-    LaunchedEffect(memberName, yearMonth) {
-        viewModel.loadMemberRecords(memberName, yearMonth)
+    LaunchedEffect(memberName, category, yearMonth) {
+        viewModel.loadMemberRecords(memberName, category, yearMonth)
     }
 
     val groupedRecords = remember(records) {
@@ -45,7 +46,7 @@ fun MemberDetailScreen(
         topBar = {
             TopAppBar(
                 title = { 
-                    Text("$memberName - ${yearMonth.format(DateTimeFormatter.ofPattern("yyyy年MM月"))}") 
+                    Text("$category - $memberName") 
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
@@ -55,50 +56,72 @@ fun MemberDetailScreen(
             )
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 总金额显示
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Column(
+            // 第一层：总金额卡片
+            item {
+                Card(
                     modifier = Modifier
-                        .padding(16.dp)
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
-                    Text(
-                        text = "总支出",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = NumberFormat.getCurrencyInstance(Locale.CHINA)
-                            .format(totalAmount),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column(
+                        modifier = Modifier
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "当前分类总支出",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = NumberFormat.getCurrencyInstance(Locale.CHINA)
+                                .format(totalAmount),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
-            // 按日期分组的记录列表
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                groupedRecords.forEach { (date, dayRecords) ->
-                    item {
-                        Text(
-                            text = date,
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
-                    }
-                    items(dayRecords.sortedByDescending { it.date }) { record ->
-                        RecordItem(record = record)
+            // 第二层：按日期分组的记录列表
+            groupedRecords.forEach { (date, dayRecords) ->
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(bottom = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = date,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = NumberFormat.getCurrencyInstance(Locale.CHINA)
+                                        .format(dayRecords.sumOf { it.amount }),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            dayRecords.forEach { record ->
+                                RecordItem(record = record)
+                            }
+                        }
                     }
                 }
             }
@@ -106,44 +129,34 @@ fun MemberDetailScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun RecordItem(record: BookkeepingRecord) {
-    Card(
-        modifier = Modifier.fillMaxWidth()
+private fun RecordItem(record: Record) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+        Column {
+            if (record.description.isNotBlank()) {
                 Text(
-                    text = record.category,
-                    style = MaterialTheme.typography.titleMedium
-                )
-                if (record.description.isNotBlank()) {
-                    Text(
-                        text = record.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Text(
-                    text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(record.date),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = record.description,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
             Text(
-                text = NumberFormat.getCurrencyInstance(Locale.CHINA).format(record.amount),
-                style = MaterialTheme.typography.titleMedium,
-                color = if (record.amount < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                text = SimpleDateFormat("HH:mm", Locale.getDefault())
+                    .format(record.dateTime),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        Text(
+            text = NumberFormat.getCurrencyInstance(Locale.CHINA)
+                .format(record.amount),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }

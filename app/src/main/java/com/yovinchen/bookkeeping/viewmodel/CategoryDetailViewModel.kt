@@ -1,14 +1,12 @@
 package com.yovinchen.bookkeeping.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
-import com.yovinchen.bookkeeping.model.Member
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import com.yovinchen.bookkeeping.model.CategoryStat
+import kotlinx.coroutines.flow.*
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
@@ -17,36 +15,40 @@ class CategoryDetailViewModel(
     private val category: String,
     private val month: YearMonth
 ) : ViewModel() {
+    private val recordDao = database.bookkeepingDao()
+    private val yearMonthStr = month.format(DateTimeFormatter.ofPattern("yyyy-MM"))
+
     private val _records = MutableStateFlow<List<BookkeepingRecord>>(emptyList())
-    val records: StateFlow<List<BookkeepingRecord>> = _records
+    val records: StateFlow<List<BookkeepingRecord>> = _records.asStateFlow()
 
-    private val _total = MutableStateFlow(0.0)
-    val total: StateFlow<Double> = _total
+    private val _memberStats = MutableStateFlow<List<CategoryStat>>(emptyList())
+    val memberStats: StateFlow<List<CategoryStat>> = _memberStats.asStateFlow()
 
-    private val _members = MutableStateFlow<List<Member>>(emptyList())
-    val members: StateFlow<List<Member>> = _members
+    val total: StateFlow<Double> = records
+        .map { records -> records.sumOf { it.amount } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0.0
+        )
 
     init {
-        loadRecords()
-        loadMembers()
-    }
-
-    private fun loadRecords() {
-        viewModelScope.launch {
-            val monthStr = month.format(DateTimeFormatter.ofPattern("yyyy-MM"))
-            database.bookkeepingDao().getRecordsByCategoryAndMonth(category, monthStr)
-                .collect { records ->
-                    _records.value = records
-                    _total.value = records.sumOf { it.amount }
+        recordDao.getRecordsByCategory(category)
+            .onEach { records ->
+                _records.value = records.filter { record ->
+                    val recordMonth = YearMonth.from(
+                        DateTimeFormatter.ofPattern("yyyy-MM")
+                            .parse(yearMonthStr)
+                    )
+                    YearMonth.from(record.date.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()) == recordMonth
                 }
-        }
-    }
-
-    private fun loadMembers() {
-        viewModelScope.launch {
-            database.memberDao().getAllMembers().collect { members ->
-                _members.value = members
             }
-        }
+            .launchIn(viewModelScope)
+
+        recordDao.getMemberStatsByCategory(category, yearMonthStr)
+            .onEach { stats ->
+                _memberStats.value = stats
+            }
+            .launchIn(viewModelScope)
     }
 }
