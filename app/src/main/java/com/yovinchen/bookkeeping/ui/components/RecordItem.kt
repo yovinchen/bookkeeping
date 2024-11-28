@@ -22,6 +22,7 @@ fun RecordItem(
     members: List<Member> = emptyList()
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
+//    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val member = members.find { it.id == record.memberId }
 
@@ -48,14 +49,18 @@ fun RecordItem(
                     style = MaterialTheme.typography.bodyLarge
                 )
                 
-                // 第二行：时间 | 成员 | 详情
+                // 第二行：日期和时间 | 成员 | 详情
                 Text(
                     text = buildString {
+//                        append(dateFormat.format(record.date))
+//                        append(" ")
                         append(timeFormat.format(record.date))
-                        if (member != null && member.name != "自己") {
+//                        if (member != null && member.name != "自己") {
                             append(" | ")
+                        if (member != null) {
                             append(member.name)
                         }
+//                        }
                         if (record.description.isNotEmpty()) {
                             append(" | ")
                             append(record.description)

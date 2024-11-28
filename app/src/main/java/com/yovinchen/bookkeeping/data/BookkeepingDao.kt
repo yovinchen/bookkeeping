@@ -27,6 +27,17 @@ interface BookkeepingDao {
     @Query("SELECT SUM(amount) FROM bookkeeping_records WHERE type = :type AND (memberId = :memberId OR memberId IS NULL)")
     fun getTotalAmountByType(type: TransactionType, memberId: Int? = null): Flow<Double?>
 
+    @Query("""
+        SELECT * FROM bookkeeping_records 
+        WHERE category = :category 
+        AND strftime('%Y-%m', datetime(date/1000, 'unixepoch')) = :yearMonth
+        ORDER BY date DESC
+    """)
+    fun getRecordsByCategoryAndMonth(
+        category: String,
+        yearMonth: String
+    ): Flow<List<BookkeepingRecord>>
+
     @Insert
     suspend fun insertRecord(record: BookkeepingRecord): Long
 

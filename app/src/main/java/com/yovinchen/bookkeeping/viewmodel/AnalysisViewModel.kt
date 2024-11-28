@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
+import com.yovinchen.bookkeeping.model.AnalysisType
+import com.yovinchen.bookkeeping.model.CategoryStat
 import com.yovinchen.bookkeeping.model.TransactionType
 import kotlinx.coroutines.flow.*
 import java.time.LocalDateTime
@@ -59,14 +61,3 @@ class AnalysisViewModel(application: Application) : AndroidViewModel(application
         _selectedAnalysisType.value = type
     }
 }
-
-enum class AnalysisType {
-    EXPENSE, INCOME, TREND
-}
-
-data class CategoryStat(
-    val category: String,
-    val amount: Double,
-    val count: Int,
-    val percentage: Double = 0.0
-)

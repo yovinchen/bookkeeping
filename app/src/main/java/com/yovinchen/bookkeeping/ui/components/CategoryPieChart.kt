@@ -35,19 +35,19 @@ fun CategoryPieChart(
                 description.isEnabled = false
                 setUsePercentValues(true)
                 setDrawEntryLabels(true)
-                
+
                 // 禁用图例显示
                 legend.isEnabled = false
-                
+
                 isDrawHoleEnabled = true
                 holeRadius = 40f
                 setHoleColor(AndroidColor.TRANSPARENT)
                 setTransparentCircleRadius(45f)
-                
-                // 设置标签文字颜色为白色（因为标签在彩色扇形上）
-                setEntryLabelColor(AndroidColor.WHITE)
+
+                // 设置标签文字颜色
+                setEntryLabelColor(textColor)
                 setEntryLabelTextSize(12f)
-                
+
                 // 设置中心文字颜色跟随主题
                 setCenterTextColor(textColor)
             }
@@ -61,7 +61,7 @@ fun CategoryPieChart(
                 colors = ColorTemplate.MATERIAL_COLORS.toList()
                 valueTextSize = 14f
                 valueFormatter = PercentFormatter(chart)
-                valueTextColor = AndroidColor.WHITE  // 扇形上的数值文字保持白色
+                valueTextColor = textColor
                 setDrawValues(true)
             }
 
