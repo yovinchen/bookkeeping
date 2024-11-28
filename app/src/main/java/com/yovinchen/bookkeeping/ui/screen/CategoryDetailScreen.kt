@@ -62,27 +62,74 @@ fun CategoryDetailScreen(
                 .padding(padding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // 第一部分：总支出
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "总支出",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = NumberFormat.getCurrencyInstance(Locale.CHINA).format(total),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // 第二部分：扇形图
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "成员分布",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                        CategoryPieChart(
+                            categoryData = memberStats.map { Pair(it.category, it.percentage.toFloat()) },
+                            memberData = emptyList(),
+                            currentViewMode = false,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            onCategoryClick = { memberName -> onNavigateToMemberDetail(memberName) }
+                        )
+                    }
+                }
+            }
+
+            // 第三部分：详细信息
             item {
                 Text(
-                    text = NumberFormat.getCurrencyInstance(Locale.CHINA).format(total),
-                    style = MaterialTheme.typography.headlineMedium,
+                    text = "详细记录",
+                    style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(16.dp)
                 )
             }
 
-            item {
-                CategoryPieChart(
-                    categoryData = memberStats.map { Pair(it.category, it.percentage.toFloat()) },
-                    memberData = emptyList(),
-                    currentViewMode = false,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    onCategoryClick = { memberName -> onNavigateToMemberDetail(memberName) }
-                )
-            }
-
-            // 按日期分组记录
+            // 按日期分组的记录列表
             val groupedRecords = records.groupBy { record ->
                 SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(record.date)
             }.toSortedMap(compareByDescending { it })
