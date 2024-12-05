@@ -12,5 +12,6 @@ data class Record(
     val category: String,
     val description: String,
     val dateTime: LocalDateTime = LocalDateTime.now(),
-    val isExpense: Boolean = true
+    val isExpense: Boolean = true,
+    val member: String = "Default"
 )

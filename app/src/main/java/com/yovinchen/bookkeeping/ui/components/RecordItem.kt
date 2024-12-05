@@ -52,10 +52,8 @@ fun RecordItem(
                 Text(
                     text = buildString {
                         append(timeFormat.format(record.date))
-                        if (member != null && member.name != "自己") {
-                            append(" | ")
-                            append(member.name)
-                        }
+                        append(" | ")
+                        append(member?.name ?: "自己")
                         if (record.description.isNotEmpty()) {
                             append(" | ")
                             append(record.description)
