@@ -25,15 +25,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yovinchen.bookkeeping.data.Record
-import com.yovinchen.bookkeeping.model.TransactionType
 import com.yovinchen.bookkeeping.model.AnalysisType
+import com.yovinchen.bookkeeping.model.TransactionType
 import com.yovinchen.bookkeeping.ui.components.RecordItem
 import com.yovinchen.bookkeeping.viewmodel.MemberDetailViewModel
 import java.text.NumberFormat
