@@ -38,6 +38,7 @@ import com.yovinchen.bookkeeping.model.MemberStat
 import com.yovinchen.bookkeeping.ui.components.CategoryPieChart
 import com.yovinchen.bookkeeping.ui.components.CategoryStatItem
 import com.yovinchen.bookkeeping.ui.components.DateRangePicker
+import com.yovinchen.bookkeeping.ui.components.TrendLineChart
 import com.yovinchen.bookkeeping.viewmodel.AnalysisViewModel
 import java.time.YearMonth
 
@@ -58,6 +59,7 @@ fun AnalysisScreen(
     val selectedAnalysisType by viewModel.selectedAnalysisType.collectAsState()
     val categoryStats by viewModel.categoryStats.collectAsState()
     val memberStats by viewModel.memberStats.collectAsState()
+    val records by viewModel.records.collectAsState()
 
     var showViewModeMenu by remember { mutableStateOf(false) }
     var currentViewMode by rememberSaveable { mutableStateOf(ViewMode.CATEGORY) }
@@ -141,43 +143,59 @@ fun AnalysisScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp)
             ) {
-                // 添加饼图作为第一个项目
-                if (selectedAnalysisType != AnalysisType.TREND) {
-                    item {
-                        CategoryPieChart(
-                            categoryData = categoryStats.map { Pair(it.category, it.percentage.toFloat()) },
-                            memberData = memberStats.map { Pair(it.member, it.percentage.toFloat()) },
-                            currentViewMode = currentViewMode == ViewMode.MEMBER,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .padding(bottom = 16.dp),
-                            onCategoryClick = { category ->
-                                if (currentViewMode == ViewMode.CATEGORY) {
-                                    onNavigateToCategoryDetail(category, startMonth, endMonth)
-                                } else {
-                                    onNavigateToMemberDetail(category, startMonth, endMonth, selectedAnalysisType)
-                                }
-                            }
-                        )
-                    }
-                }
-
-                // 添加统计列表项目
-                items(if (currentViewMode == ViewMode.CATEGORY) categoryStats else memberStats) { stat ->
-                    val category = if (stat is CategoryStat) stat.category else null
-                    val member = if (stat is MemberStat) stat.member else null
-
-                    CategoryStatItem(
-                        stat = stat,
-                        onClick = {
-                            if (currentViewMode == ViewMode.CATEGORY && category != null) {
-                                onNavigateToCategoryDetail(category, startMonth, endMonth)
-                            } else if (currentViewMode == ViewMode.MEMBER && member != null) {
-                                onNavigateToMemberDetail(member, startMonth, endMonth, selectedAnalysisType)
+                when (selectedAnalysisType) {
+                    AnalysisType.TREND -> {
+                        // 趋势视图
+                        item {
+                            if (records.isNotEmpty()) {
+                                TrendLineChart(
+                                    records = records,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(300.dp)
+                                        .padding(vertical = 16.dp)
+                                )
                             }
                         }
-                    )
+                    }
+                    else -> {
+                        // 饼图视图
+                        item {
+                            CategoryPieChart(
+                                categoryData = categoryStats.map { Pair(it.category, it.percentage.toFloat()) },
+                                memberData = memberStats.map { Pair(it.member, it.percentage.toFloat()) },
+                                currentViewMode = currentViewMode == ViewMode.MEMBER,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                                    .padding(bottom = 16.dp),
+                                onCategoryClick = { category ->
+                                    if (currentViewMode == ViewMode.CATEGORY) {
+                                        onNavigateToCategoryDetail(category, startMonth, endMonth)
+                                    } else {
+                                        onNavigateToMemberDetail(category, startMonth, endMonth, selectedAnalysisType)
+                                    }
+                                }
+                            )
+                        }
+
+                        // 统计列表
+                        items(if (currentViewMode == ViewMode.CATEGORY) categoryStats else memberStats) { stat ->
+                            val category = if (stat is CategoryStat) stat.category else null
+                            val member = if (stat is MemberStat) stat.member else null
+
+                            CategoryStatItem(
+                                stat = stat,
+                                onClick = {
+                                    if (currentViewMode == ViewMode.CATEGORY && category != null) {
+                                        onNavigateToCategoryDetail(category, startMonth, endMonth)
+                                    } else if (currentViewMode == ViewMode.MEMBER && member != null) {
+                                        onNavigateToMemberDetail(member, startMonth, endMonth, selectedAnalysisType)
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
             }
         }
