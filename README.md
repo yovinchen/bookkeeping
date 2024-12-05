@@ -81,19 +81,24 @@
 - `release/*`: 版本发布分支
 - `hotfix/*`: 紧急修复分支
 
-feat: 新功能（feature）
-fix: 修补bug
-docs: 文档（documentation）
-style: 格式（不影响代码运行的变动）
-refactor: 重构（即不是新增功能，也不是修改bug的代码变动）
-chore: 构建过程或辅助工具的变动
-revert: 撤销，版本回退
-perf: 性能优化
-test：测试
-improvement: 改进
-build: 打包
-ci: 持续集成
+## 🔄 提交规范
 
+提交信息应遵循以下格式：`<type>: <description>`
+
+### 提交类型（Type）
+
+- `feat`: 新功能（feature）
+- `fix`: 修复bug
+- `docs`: 文档更新（documentation）
+- `style`: 代码格式（不影响代码运行的变动）
+- `refactor`: 代码重构（既不是新增功能，也不是修复bug）
+- `perf`: 性能优化
+- `test`: 测试相关
+- `build`: 构建相关
+- `ci`: 持续集成
+- `chore`: 构建过程或辅助工具的变动
+- `revert`: 回退提交
+- `improvement`: 改进
 
 ## 📝 版本历史
 
