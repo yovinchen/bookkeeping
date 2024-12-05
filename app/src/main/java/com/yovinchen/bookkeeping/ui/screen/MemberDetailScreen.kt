@@ -33,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yovinchen.bookkeeping.data.Record
 import com.yovinchen.bookkeeping.model.AnalysisType
 import com.yovinchen.bookkeeping.model.TransactionType
+import com.yovinchen.bookkeeping.ui.components.CategoryPieChart
 import com.yovinchen.bookkeeping.ui.components.RecordItem
 import com.yovinchen.bookkeeping.viewmodel.MemberDetailViewModel
 import java.text.NumberFormat
@@ -53,7 +54,8 @@ fun MemberDetailScreen(
 ) {
     val records by viewModel.memberRecords.collectAsState(initial = emptyList())
     val totalAmount by viewModel.totalAmount.collectAsState(initial = 0.0)
-    
+    val categoryData by viewModel.categoryData.collectAsState(initial = emptyList())
+
     LaunchedEffect(memberName, category, startMonth, endMonth, analysisType) {
         viewModel.loadMemberRecords(
             memberName = memberName,
@@ -99,20 +101,54 @@ fun MemberDetailScreen(
                 ) {
                     Column(
                         modifier = Modifier
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                            .fillMaxWidth()
+                            .padding(16.dp)
                     ) {
                         Text(
-                            text = if (records.isNotEmpty() && records.first().type == TransactionType.INCOME) "总收入" else "总支出",
-                            style = MaterialTheme.typography.titleMedium
+                            text = "总金额",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = NumberFormat.getCurrencyInstance(Locale.CHINA)
                                 .format(totalAmount),
                             style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
+                            color = MaterialTheme.colorScheme.primary
                         )
+                    }
+                }
+            }
+
+            // 当从成员视图进入时显示饼图
+            if (category.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = "分类统计",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            CategoryPieChart(
+                                categoryData = categoryData,
+                                memberData = emptyList(),
+                                currentViewMode = false,
+                                onCategoryClick = { selectedCategory ->
+                                    // 暂时不处理点击事件
+                                }
+                            )
+                        }
                     }
                 }
             }

@@ -8,6 +8,7 @@ import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.AnalysisType
 import com.yovinchen.bookkeeping.model.TransactionType
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import java.time.YearMonth
 import java.time.ZoneId
 import java.util.Date
@@ -21,6 +22,9 @@ class MemberDetailViewModel(application: Application) : AndroidViewModel(applica
 
     private val _totalAmount = MutableStateFlow(0.0)
     val totalAmount: StateFlow<Double> = _totalAmount.asStateFlow()
+
+    private val _categoryData = MutableStateFlow<List<Pair<String, Float>>>(emptyList())
+    val categoryData: StateFlow<List<Pair<String, Float>>> = _categoryData.asStateFlow()
 
     fun loadMemberRecords(
         memberName: String,
@@ -62,11 +66,18 @@ class MemberDetailViewModel(application: Application) : AndroidViewModel(applica
             )
         }
 
-        recordsFlow
-            .onEach { records ->
+        viewModelScope.launch {
+            recordsFlow.collect { records ->
                 _memberRecords.value = records
                 _totalAmount.value = records.sumOf { it.amount }
+                
+                // 计算分类数据
+                val categoryAmounts = records.groupBy { it.category }
+                    .mapValues { (_, records) -> records.sumOf { it.amount }.toFloat() }
+                    .toList()
+                    .sortedByDescending { it.second }
+                _categoryData.value = categoryAmounts
             }
-            .launchIn(viewModelScope)
+        }
     }
 }
