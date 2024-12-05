@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
 import com.yovinchen.bookkeeping.model.AnalysisType
+import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.CategoryStat
 import com.yovinchen.bookkeeping.model.MemberStat
 import com.yovinchen.bookkeeping.model.TransactionType
@@ -34,6 +35,9 @@ class AnalysisViewModel(application: Application) : AndroidViewModel(application
     private val _memberStats = MutableStateFlow<List<MemberStat>>(emptyList())
     val memberStats: StateFlow<List<MemberStat>> = _memberStats.asStateFlow()
 
+    private val _records = MutableStateFlow<List<BookkeepingRecord>>(emptyList())
+    val records: StateFlow<List<BookkeepingRecord>> = _records.asStateFlow()
+
     init {
         viewModelScope.launch {
             combine(startMonth, endMonth, selectedAnalysisType) { start, end, type ->
@@ -58,21 +62,40 @@ class AnalysisViewModel(application: Application) : AndroidViewModel(application
 
     private suspend fun updateStats(startMonth: YearMonth, endMonth: YearMonth, type: AnalysisType) {
         val records = recordDao.getAllRecords().first()
+        
+        // 过滤日期范围内的记录
         val monthRecords = records.filter {
             val recordDate = Date(it.date.time)
             val localDateTime = LocalDateTime.ofInstant(recordDate.toInstant(), ZoneId.systemDefault())
             val yearMonth = YearMonth.from(localDateTime)
             yearMonth.isAfter(startMonth.minusMonths(1)) && 
-            yearMonth.isBefore(endMonth.plusMonths(1)) && 
-            it.type == when(type) {
-                AnalysisType.EXPENSE -> TransactionType.EXPENSE
-                AnalysisType.INCOME -> TransactionType.INCOME
-                else -> null
+            yearMonth.isBefore(endMonth.plusMonths(1))
+        }
+
+        // 更新记录数据
+        _records.value = monthRecords
+
+        // 根据分析类型过滤记录
+        val filteredRecords = if (type == AnalysisType.TREND) {
+            monthRecords
+        } else {
+            monthRecords.filter {
+                it.type == when(type) {
+                    AnalysisType.EXPENSE -> TransactionType.EXPENSE
+                    AnalysisType.INCOME -> TransactionType.INCOME
+                    else -> return@filter true
+                }
             }
         }
 
+        // 更新统计数据
+        updateCategoryStats(filteredRecords)
+        updateMemberStats(filteredRecords)
+    }
+
+    private suspend fun updateCategoryStats(records: List<BookkeepingRecord>) {
         // 按分类统计
-        val categoryMap = monthRecords.groupBy { it.category }
+        val categoryMap = records.groupBy { it.category }
         val categoryStats = categoryMap.map { (category, records) ->
             CategoryStat(
                 category = category,
@@ -87,9 +110,13 @@ class AnalysisViewModel(application: Application) : AndroidViewModel(application
             it.copy(percentage = if (categoryTotal > 0) it.amount / categoryTotal * 100 else 0.0) 
         }
 
+        _categoryStats.value = categoryStatsWithPercentage
+    }
+
+    private suspend fun updateMemberStats(records: List<BookkeepingRecord>) {
         // 按成员统计
         val members = memberDao.getAllMembers().first()
-        val memberMap = monthRecords.groupBy { record ->
+        val memberMap = records.groupBy { record ->
             members.find { it.id == record.memberId }?.name ?: "未分配"
         }
         
@@ -107,7 +134,6 @@ class AnalysisViewModel(application: Application) : AndroidViewModel(application
             it.copy(percentage = if (memberTotal > 0) it.amount / memberTotal * 100 else 0.0) 
         }
 
-        _categoryStats.value = categoryStatsWithPercentage
         _memberStats.value = memberStatsWithPercentage
     }
 }
