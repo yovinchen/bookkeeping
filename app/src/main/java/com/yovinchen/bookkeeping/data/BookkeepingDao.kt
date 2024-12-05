@@ -110,15 +110,47 @@ interface BookkeepingDao {
 
     @Query("""
         SELECT * FROM bookkeeping_records 
-        WHERE memberId IN (SELECT id FROM members WHERE name = :memberName)
-        AND category = :category
+        WHERE memberId IN (SELECT id FROM members WHERE name = :memberName) 
         AND date BETWEEN :startDate AND :endDate
+        AND (
+            :transactionType IS NULL 
+            OR type = (
+                CASE :transactionType
+                    WHEN 'INCOME' THEN 'INCOME'
+                    WHEN 'EXPENSE' THEN 'EXPENSE'
+                END
+            )
+        )
+        ORDER BY date DESC
+    """)
+    suspend fun getRecordsByMember(
+        memberName: String, 
+        startDate: Date, 
+        endDate: Date,
+        transactionType: TransactionType?
+    ): List<BookkeepingRecord>
+
+    @Query("""
+        SELECT * FROM bookkeeping_records 
+        WHERE memberId IN (SELECT id FROM members WHERE name = :memberName)
+        AND category = :category 
+        AND date BETWEEN :startDate AND :endDate
+        AND (
+            :transactionType IS NULL 
+            OR type = (
+                CASE :transactionType
+                    WHEN 'INCOME' THEN 'INCOME'
+                    WHEN 'EXPENSE' THEN 'EXPENSE'
+                END
+            )
+        )
         ORDER BY date DESC
     """)
     suspend fun getRecordsByMemberAndCategory(
         memberName: String,
         category: String,
         startDate: Date,
-        endDate: Date
+        endDate: Date,
+        transactionType: TransactionType?
     ): List<BookkeepingRecord>
 }

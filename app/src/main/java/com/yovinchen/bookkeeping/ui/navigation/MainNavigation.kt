@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.yovinchen.bookkeeping.model.AnalysisType
 import com.yovinchen.bookkeeping.model.ThemeMode
 import com.yovinchen.bookkeeping.ui.screen.*
 import java.time.YearMonth
@@ -40,9 +41,9 @@ sealed class Screen(
             return "category_detail/$category/${yearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}"
         }
     }
-    object MemberDetail : Screen("member_detail/{memberName}/{category}/{yearMonth}", "成员详情") {
-        fun createRoute(memberName: String, category: String, yearMonth: YearMonth): String {
-            return "member_detail/$memberName/$category/${yearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}"
+    object MemberDetail : Screen("member_detail/{memberName}/{category}/{yearMonth}?type={type}", "成员详情") {
+        fun createRoute(memberName: String, category: String, yearMonth: YearMonth, type: AnalysisType): String {
+            return "member_detail/$memberName/$category/${yearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}?type=${type.name}"
         }
     }
 
@@ -96,10 +97,8 @@ fun MainNavigation(
                     onNavigateToCategoryDetail = { category, yearMonth ->
                         navController.navigate(Screen.CategoryDetail.createRoute(category, yearMonth))
                     },
-                    onNavigateToMemberDetail = { memberName, yearMonth ->
-                        // 在这里我们暂时使用一个默认分类，你需要根据实际情况修改这里的逻辑
-                        val defaultCategory = "默认"
-                        navController.navigate(Screen.MemberDetail.createRoute(memberName, defaultCategory, yearMonth))
+                    onNavigateToMemberDetail = { memberName, yearMonth, analysisType ->
+                        navController.navigate(Screen.MemberDetail.createRoute(memberName, "", yearMonth, analysisType))
                     }
                 )
             }
@@ -127,7 +126,7 @@ fun MainNavigation(
                     yearMonth = yearMonth,
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToMemberDetail = { memberName ->
-                        navController.navigate(Screen.MemberDetail.createRoute(memberName, category, yearMonth))
+                        navController.navigate(Screen.MemberDetail.createRoute(memberName, category, yearMonth, AnalysisType.EXPENSE))
                     }
                 )
             }
@@ -137,18 +136,30 @@ fun MainNavigation(
                 arguments = listOf(
                     navArgument("memberName") { type = NavType.StringType },
                     navArgument("category") { type = NavType.StringType },
-                    navArgument("yearMonth") { type = NavType.StringType }
+                    navArgument("yearMonth") { type = NavType.StringType },
+                    navArgument("type") { 
+                        type = NavType.StringType
+                        defaultValue = AnalysisType.EXPENSE.name
+                    }
                 )
             ) { backStackEntry ->
                 val memberName = backStackEntry.arguments?.getString("memberName") ?: return@composable
                 val category = backStackEntry.arguments?.getString("category") ?: return@composable
                 val yearMonthStr = backStackEntry.arguments?.getString("yearMonth") ?: return@composable
                 val yearMonth = YearMonth.parse(yearMonthStr)
+                val type = backStackEntry.arguments?.getString("type")?.let {
+                    try {
+                        AnalysisType.valueOf(it)
+                    } catch (e: IllegalArgumentException) {
+                        AnalysisType.EXPENSE
+                    }
+                } ?: AnalysisType.EXPENSE
 
                 MemberDetailScreen(
                     memberName = memberName,
-                    category = category,
                     yearMonth = yearMonth,
+                    category = category,
+                    analysisType = type,
                     onNavigateBack = { navController.popBackStack() }
                 )
             }

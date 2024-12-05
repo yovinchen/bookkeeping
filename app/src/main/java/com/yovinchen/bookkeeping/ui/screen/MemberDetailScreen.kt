@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yovinchen.bookkeeping.data.Record
 import com.yovinchen.bookkeeping.model.TransactionType
+import com.yovinchen.bookkeeping.model.AnalysisType
 import com.yovinchen.bookkeeping.ui.components.RecordItem
 import com.yovinchen.bookkeeping.viewmodel.MemberDetailViewModel
 import java.text.NumberFormat
@@ -43,16 +45,17 @@ import java.util.Locale
 @Composable
 fun MemberDetailScreen(
     memberName: String,
-    category: String,
     yearMonth: YearMonth,
+    category: String = "",
+    analysisType: AnalysisType = AnalysisType.EXPENSE,
     onNavigateBack: () -> Unit,
     viewModel: MemberDetailViewModel = viewModel()
 ) {
     val records by viewModel.memberRecords.collectAsState(initial = emptyList())
     val totalAmount by viewModel.totalAmount.collectAsState(initial = 0.0)
     
-    LaunchedEffect(memberName, category, yearMonth) {
-        viewModel.loadMemberRecords(memberName, category, yearMonth)
+    LaunchedEffect(memberName, category, yearMonth, analysisType) {
+        viewModel.loadMemberRecords(memberName, category, yearMonth, analysisType)
     }
 
     val groupedRecords = remember(records) {
@@ -65,7 +68,7 @@ fun MemberDetailScreen(
         topBar = {
             TopAppBar(
                 title = { 
-                    Text("$category - $memberName") 
+                    Text(memberName) 
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {

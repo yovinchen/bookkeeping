@@ -29,7 +29,7 @@ enum class ViewMode {
 @Composable
 fun AnalysisScreen(
     onNavigateToCategoryDetail: (String, YearMonth) -> Unit,
-    onNavigateToMemberDetail: (String, YearMonth) -> Unit
+    onNavigateToMemberDetail: (String, YearMonth, AnalysisType) -> Unit
 ) {
     val viewModel: AnalysisViewModel = viewModel()
     val selectedMonth by viewModel.selectedMonth.collectAsState()
@@ -138,7 +138,7 @@ fun AnalysisScreen(
                                 if (currentViewMode == ViewMode.CATEGORY) {
                                     onNavigateToCategoryDetail(category, selectedMonth)
                                 } else {
-                                    onNavigateToMemberDetail(category, selectedMonth)
+                                    onNavigateToMemberDetail(category, selectedMonth, selectedAnalysisType)
                                 }
                             }
                         )
@@ -149,11 +149,11 @@ fun AnalysisScreen(
                 items(if (currentViewMode == ViewMode.CATEGORY) categoryStats else memberStats) { stat ->
                     CategoryStatItem(
                         stat = stat,
-                        onClick = { 
+                        onClick = {
                             if (currentViewMode == ViewMode.CATEGORY) {
                                 onNavigateToCategoryDetail(stat.category, selectedMonth)
                             } else {
-                                onNavigateToMemberDetail(stat.category, selectedMonth)
+                                onNavigateToMemberDetail(stat.category, selectedMonth, selectedAnalysisType)
                             }
                         }
                     )
