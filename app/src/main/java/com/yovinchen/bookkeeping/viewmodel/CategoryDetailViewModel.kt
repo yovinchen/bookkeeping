@@ -1,21 +1,27 @@
 package com.yovinchen.bookkeeping.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.MemberStat
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import java.time.YearMonth
 import java.time.ZoneId
 import java.util.Date
 
 class CategoryDetailViewModel(
-    private val database: BookkeepingDatabase,
-    private val category: String,
-    private val startMonth: YearMonth,
-    private val endMonth: YearMonth
+    database: BookkeepingDatabase,
+    category: String,
+    startMonth: YearMonth,
+    endMonth: YearMonth
 ) : ViewModel() {
     private val recordDao = database.bookkeepingDao()
 
