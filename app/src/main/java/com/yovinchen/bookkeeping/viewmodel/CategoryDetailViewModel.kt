@@ -5,24 +5,25 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
-import com.yovinchen.bookkeeping.model.CategoryStat
+import com.yovinchen.bookkeeping.model.MemberStat
 import kotlinx.coroutines.flow.*
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
+import java.time.ZoneId
+import java.util.Date
 
 class CategoryDetailViewModel(
     private val database: BookkeepingDatabase,
     private val category: String,
-    private val month: YearMonth
+    private val startMonth: YearMonth,
+    private val endMonth: YearMonth
 ) : ViewModel() {
     private val recordDao = database.bookkeepingDao()
-    private val yearMonthStr = month.format(DateTimeFormatter.ofPattern("yyyy-MM"))
 
     private val _records = MutableStateFlow<List<BookkeepingRecord>>(emptyList())
     val records: StateFlow<List<BookkeepingRecord>> = _records.asStateFlow()
 
-    private val _memberStats = MutableStateFlow<List<CategoryStat>>(emptyList())
-    val memberStats: StateFlow<List<CategoryStat>> = _memberStats.asStateFlow()
+    private val _memberStats = MutableStateFlow<List<MemberStat>>(emptyList())
+    val memberStats: StateFlow<List<MemberStat>> = _memberStats.asStateFlow()
 
     val total: StateFlow<Double> = records
         .map { records -> records.sumOf { it.amount } }
@@ -33,22 +34,30 @@ class CategoryDetailViewModel(
         )
 
     init {
-        recordDao.getRecordsByCategory(category)
-            .onEach { records ->
-                _records.value = records.filter { record ->
-                    val recordMonth = YearMonth.from(
-                        DateTimeFormatter.ofPattern("yyyy-MM")
-                            .parse(yearMonthStr)
-                    )
-                    YearMonth.from(record.date.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()) == recordMonth
-                }
-            }
-            .launchIn(viewModelScope)
+        val startDate = startMonth.atDay(1).atStartOfDay()
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .let { Date.from(it) }
 
-        recordDao.getMemberStatsByCategory(category, yearMonthStr)
-            .onEach { stats ->
-                _memberStats.value = stats
-            }
-            .launchIn(viewModelScope)
+        val endDate = endMonth.atEndOfMonth().atTime(23, 59, 59)
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .let { Date.from(it) }
+
+        recordDao.getRecordsByCategoryAndDateRange(
+            category = category,
+            startDate = startDate,
+            endDate = endDate
+        )
+        .onEach { records -> _records.value = records }
+        .launchIn(viewModelScope)
+
+        recordDao.getMemberStatsByCategoryAndDateRange(
+            category = category,
+            startDate = startDate,
+            endDate = endDate
+        )
+        .onEach { stats -> _memberStats.value = stats }
+        .launchIn(viewModelScope)
     }
 }

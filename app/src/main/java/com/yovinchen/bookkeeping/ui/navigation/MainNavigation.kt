@@ -36,14 +36,30 @@ sealed class Screen(
     object Home : Screen("home", "记账", Icons.AutoMirrored.Filled.List)
     object Analysis : Screen("analysis", "分析", Icons.Default.Analytics)
     object Settings : Screen("settings", "设置", Icons.Default.Settings)
-    object CategoryDetail : Screen("category_detail/{category}/{yearMonth}", "分类详情") {
-        fun createRoute(category: String, yearMonth: YearMonth): String {
-            return "category_detail/$category/${yearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}"
+    object CategoryDetail : Screen(
+        "category_detail/{category}/{startMonth}/{endMonth}",
+        "分类详情"
+    ) {
+        fun createRoute(
+            category: String,
+            startMonth: YearMonth,
+            endMonth: YearMonth
+        ): String {
+            return "category_detail/$category/${startMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}/${endMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}"
         }
     }
-    object MemberDetail : Screen("member_detail/{memberName}/{category}/{yearMonth}?type={type}", "成员详情") {
-        fun createRoute(memberName: String, category: String, yearMonth: YearMonth, type: AnalysisType): String {
-            return "member_detail/$memberName/$category/${yearMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}?type=${type.name}"
+    object MemberDetail : Screen(
+        "member_detail/{memberName}/{category}/{startMonth}/{endMonth}?type={type}",
+        "成员详情"
+    ) {
+        fun createRoute(
+            memberName: String,
+            category: String,
+            startMonth: YearMonth,
+            endMonth: YearMonth,
+            type: AnalysisType
+        ): String {
+            return "member_detail/$memberName/$category/${startMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}/${endMonth.format(DateTimeFormatter.ofPattern("yyyy-MM"))}?type=${type.name}"
         }
     }
 
@@ -94,11 +110,11 @@ fun MainNavigation(
             
             composable(Screen.Analysis.route) {
                 AnalysisScreen(
-                    onNavigateToCategoryDetail = { category, yearMonth ->
-                        navController.navigate(Screen.CategoryDetail.createRoute(category, yearMonth))
+                    onNavigateToCategoryDetail = { category, startMonth, endMonth ->
+                        navController.navigate(Screen.CategoryDetail.createRoute(category, startMonth, endMonth))
                     },
-                    onNavigateToMemberDetail = { memberName, yearMonth, analysisType ->
-                        navController.navigate(Screen.MemberDetail.createRoute(memberName, "", yearMonth, analysisType))
+                    onNavigateToMemberDetail = { memberName, startMonth, endMonth, analysisType ->
+                        navController.navigate(Screen.MemberDetail.createRoute(memberName, "", startMonth, endMonth, analysisType))
                     }
                 )
             }
@@ -114,51 +130,68 @@ fun MainNavigation(
                 route = Screen.CategoryDetail.route,
                 arguments = listOf(
                     navArgument("category") { type = NavType.StringType },
-                    navArgument("yearMonth") { type = NavType.StringType }
+                    navArgument("startMonth") { type = NavType.StringType },
+                    navArgument("endMonth") { type = NavType.StringType }
                 )
             ) { backStackEntry ->
-                val category = backStackEntry.arguments?.getString("category") ?: return@composable
-                val yearMonthStr = backStackEntry.arguments?.getString("yearMonth") ?: return@composable
-                val yearMonth = YearMonth.parse(yearMonthStr)
-
+                val category = backStackEntry.arguments?.getString("category") ?: ""
+                val startMonth = YearMonth.parse(
+                    backStackEntry.arguments?.getString("startMonth") ?: "",
+                    DateTimeFormatter.ofPattern("yyyy-MM")
+                )
+                val endMonth = YearMonth.parse(
+                    backStackEntry.arguments?.getString("endMonth") ?: "",
+                    DateTimeFormatter.ofPattern("yyyy-MM")
+                )
                 CategoryDetailScreen(
                     category = category,
-                    yearMonth = yearMonth,
+                    startMonth = startMonth,
+                    endMonth = endMonth,
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateToMemberDetail = { memberName ->
-                        navController.navigate(Screen.MemberDetail.createRoute(memberName, category, yearMonth, AnalysisType.EXPENSE))
+                        navController.navigate(
+                            Screen.MemberDetail.createRoute(
+                                memberName = memberName,
+                                category = category,
+                                startMonth = startMonth,
+                                endMonth = endMonth,
+                                type = AnalysisType.EXPENSE
+                            )
+                        )
                     }
                 )
             }
-
             composable(
                 route = Screen.MemberDetail.route,
                 arguments = listOf(
                     navArgument("memberName") { type = NavType.StringType },
                     navArgument("category") { type = NavType.StringType },
-                    navArgument("yearMonth") { type = NavType.StringType },
-                    navArgument("type") { 
+                    navArgument("startMonth") { type = NavType.StringType },
+                    navArgument("endMonth") { type = NavType.StringType },
+                    navArgument("type") {
                         type = NavType.StringType
                         defaultValue = AnalysisType.EXPENSE.name
                     }
                 )
             ) { backStackEntry ->
-                val memberName = backStackEntry.arguments?.getString("memberName") ?: return@composable
-                val category = backStackEntry.arguments?.getString("category") ?: return@composable
-                val yearMonthStr = backStackEntry.arguments?.getString("yearMonth") ?: return@composable
-                val yearMonth = YearMonth.parse(yearMonthStr)
-                val type = backStackEntry.arguments?.getString("type")?.let {
-                    try {
-                        AnalysisType.valueOf(it)
-                    } catch (e: IllegalArgumentException) {
-                        AnalysisType.EXPENSE
-                    }
-                } ?: AnalysisType.EXPENSE
-
+                val memberName = backStackEntry.arguments?.getString("memberName") ?: ""
+                val category = backStackEntry.arguments?.getString("category") ?: ""
+                val startMonth = YearMonth.parse(
+                    backStackEntry.arguments?.getString("startMonth") ?: "",
+                    DateTimeFormatter.ofPattern("yyyy-MM")
+                )
+                val endMonth = YearMonth.parse(
+                    backStackEntry.arguments?.getString("endMonth") ?: "",
+                    DateTimeFormatter.ofPattern("yyyy-MM")
+                )
+                val type = AnalysisType.valueOf(
+                    backStackEntry.arguments?.getString("type") ?: AnalysisType.EXPENSE.name
+                )
                 MemberDetailScreen(
                     memberName = memberName,
-                    yearMonth = yearMonth,
                     category = category,
+                    startMonth = startMonth,
+                    endMonth = endMonth,
                     analysisType = type,
                     onNavigateBack = { navController.popBackStack() }
                 )

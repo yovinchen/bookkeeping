@@ -44,7 +44,8 @@ import java.util.Locale
 @Composable
 fun MemberDetailScreen(
     memberName: String,
-    yearMonth: YearMonth,
+    startMonth: YearMonth,
+    endMonth: YearMonth,
     category: String = "",
     analysisType: AnalysisType = AnalysisType.EXPENSE,
     onNavigateBack: () -> Unit,
@@ -53,8 +54,14 @@ fun MemberDetailScreen(
     val records by viewModel.memberRecords.collectAsState(initial = emptyList())
     val totalAmount by viewModel.totalAmount.collectAsState(initial = 0.0)
     
-    LaunchedEffect(memberName, category, yearMonth, analysisType) {
-        viewModel.loadMemberRecords(memberName, category, yearMonth, analysisType)
+    LaunchedEffect(memberName, category, startMonth, endMonth, analysisType) {
+        viewModel.loadMemberRecords(
+            memberName = memberName,
+            category = category,
+            startMonth = startMonth,
+            endMonth = endMonth,
+            analysisType = analysisType
+        )
     }
 
     val groupedRecords = remember(records) {

@@ -3,7 +3,7 @@ package com.yovinchen.bookkeeping.data
 import androidx.room.*
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.Category
-import com.yovinchen.bookkeeping.model.CategoryStat
+import com.yovinchen.bookkeeping.model.MemberStat
 import com.yovinchen.bookkeeping.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
@@ -51,15 +51,11 @@ interface BookkeepingDao {
     ): Flow<List<BookkeepingRecord>>
 
     @Query("""
-        SELECT m.name as category, 
-        SUM(r.amount) as amount,
-        COUNT(*) as count,
-        (SUM(r.amount) * 100.0 / (
-            SELECT SUM(amount) 
-            FROM bookkeeping_records 
-            WHERE category = :category 
-            AND strftime('%Y-%m', datetime(date/1000, 'unixepoch')) = :yearMonth
-        )) as percentage
+        SELECT 
+            m.name as member,
+            SUM(r.amount) as amount,
+            COUNT(*) as count,
+            (SUM(r.amount) * 100.0 / (SELECT SUM(amount) FROM bookkeeping_records WHERE category = :category AND strftime('%Y-%m', datetime(date/1000, 'unixepoch')) = :yearMonth)) as percentage
         FROM bookkeeping_records r
         JOIN members m ON r.memberId = m.id
         WHERE r.category = :category
@@ -70,7 +66,7 @@ interface BookkeepingDao {
     fun getMemberStatsByCategory(
         category: String,
         yearMonth: String
-    ): Flow<List<CategoryStat>>
+    ): Flow<List<MemberStat>>
 
     @Query("""
         SELECT * FROM bookkeeping_records 
@@ -80,6 +76,67 @@ interface BookkeepingDao {
     fun getRecordsByCategory(
         category: String
     ): Flow<List<BookkeepingRecord>>
+
+    @Query("""
+        SELECT * FROM bookkeeping_records 
+        WHERE category = :category 
+        AND date BETWEEN :startDate AND :endDate
+        ORDER BY date DESC
+    """)
+    fun getRecordsByCategoryAndDateRange(
+        category: String,
+        startDate: Date,
+        endDate: Date
+    ): Flow<List<BookkeepingRecord>>
+
+    @Query("""
+        SELECT * FROM bookkeeping_records 
+        WHERE memberId IN (SELECT id FROM members WHERE name = :memberName)
+        AND date BETWEEN :startDate AND :endDate
+        AND (:transactionType IS NULL OR type = :transactionType)
+        ORDER BY date DESC
+    """)
+    fun getRecordsByMemberAndDateRange(
+        memberName: String,
+        startDate: Date,
+        endDate: Date,
+        transactionType: TransactionType?
+    ): Flow<List<BookkeepingRecord>>
+
+    @Query("""
+        SELECT * FROM bookkeeping_records 
+        WHERE memberId IN (SELECT id FROM members WHERE name = :memberName)
+        AND category = :category
+        AND date BETWEEN :startDate AND :endDate
+        AND (:transactionType IS NULL OR type = :transactionType)
+        ORDER BY date DESC
+    """)
+    fun getRecordsByMemberCategoryAndDateRange(
+        memberName: String,
+        category: String,
+        startDate: Date,
+        endDate: Date,
+        transactionType: TransactionType?
+    ): Flow<List<BookkeepingRecord>>
+
+    @Query("""
+        SELECT 
+            m.name as member,
+            SUM(r.amount) as amount,
+            COUNT(*) as count,
+            (SUM(r.amount) * 100.0 / (SELECT SUM(amount) FROM bookkeeping_records WHERE category = :category AND date BETWEEN :startDate AND :endDate)) as percentage
+        FROM bookkeeping_records r
+        JOIN members m ON r.memberId = m.id
+        WHERE r.category = :category
+        AND r.date BETWEEN :startDate AND :endDate
+        GROUP BY m.name
+        ORDER BY amount DESC
+    """)
+    fun getMemberStatsByCategoryAndDateRange(
+        category: String,
+        startDate: Date,
+        endDate: Date
+    ): Flow<List<MemberStat>>
 
     @Insert
     suspend fun insertRecord(record: BookkeepingRecord): Long

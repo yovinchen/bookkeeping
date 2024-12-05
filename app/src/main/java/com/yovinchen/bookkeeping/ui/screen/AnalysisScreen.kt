@@ -48,8 +48,9 @@ enum class ViewMode {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnalysisScreen(
-    onNavigateToCategoryDetail: (String, YearMonth) -> Unit,
-    onNavigateToMemberDetail: (String, YearMonth, AnalysisType) -> Unit
+    onNavigateToCategoryDetail: (String, YearMonth, YearMonth) -> Unit,
+    onNavigateToMemberDetail: (String, YearMonth, YearMonth, AnalysisType) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val viewModel: AnalysisViewModel = viewModel()
     val startMonth by viewModel.startMonth.collectAsState()
@@ -61,11 +62,13 @@ fun AnalysisScreen(
     var showViewModeMenu by remember { mutableStateOf(false) }
     var currentViewMode by rememberSaveable { mutableStateOf(ViewMode.CATEGORY) }
 
-    Scaffold { padding ->
+    Scaffold(
+        modifier = modifier.fillMaxSize()
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(paddingValues)
         ) {
             // 时间区间选择
             DateRangePicker(
@@ -151,9 +154,9 @@ fun AnalysisScreen(
                                 .padding(bottom = 16.dp),
                             onCategoryClick = { category ->
                                 if (currentViewMode == ViewMode.CATEGORY) {
-                                    onNavigateToCategoryDetail(category, startMonth)
+                                    onNavigateToCategoryDetail(category, startMonth, endMonth)
                                 } else {
-                                    onNavigateToMemberDetail(category, startMonth, selectedAnalysisType)
+                                    onNavigateToMemberDetail(category, startMonth, endMonth, selectedAnalysisType)
                                 }
                             }
                         )
@@ -169,9 +172,9 @@ fun AnalysisScreen(
                         stat = stat,
                         onClick = {
                             if (currentViewMode == ViewMode.CATEGORY && category != null) {
-                                onNavigateToCategoryDetail(category, startMonth)
+                                onNavigateToCategoryDetail(category, startMonth, endMonth)
                             } else if (currentViewMode == ViewMode.MEMBER && member != null) {
-                                onNavigateToMemberDetail(member, startMonth, selectedAnalysisType)
+                                onNavigateToMemberDetail(member, startMonth, endMonth, selectedAnalysisType)
                             }
                         }
                     )

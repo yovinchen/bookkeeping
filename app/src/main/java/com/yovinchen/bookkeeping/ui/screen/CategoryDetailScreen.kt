@@ -1,5 +1,6 @@
 package com.yovinchen.bookkeeping.ui.screen
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
+import com.yovinchen.bookkeeping.model.MemberStat
 import com.yovinchen.bookkeeping.model.TransactionType
 import com.yovinchen.bookkeeping.ui.components.CategoryPieChart
 import com.yovinchen.bookkeeping.ui.components.RecordItem
@@ -47,17 +50,20 @@ import java.util.Locale
 @Composable
 fun CategoryDetailScreen(
     category: String,
-    yearMonth: YearMonth,
+    startMonth: YearMonth,
+    endMonth: YearMonth,
     onNavigateBack: () -> Unit,
     onNavigateToMemberDetail: (String) -> Unit,
+    viewModel: CategoryDetailViewModel = viewModel(
+        factory = CategoryDetailViewModelFactory(
+            database = BookkeepingDatabase.getDatabase(LocalContext.current),
+            category = category,
+            startMonth = startMonth,
+            endMonth = endMonth
+        )
+    ),
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val database = remember { BookkeepingDatabase.getDatabase(context) }
-    val viewModel: CategoryDetailViewModel = viewModel(
-        factory = CategoryDetailViewModelFactory(database, category, yearMonth)
-    )
-
     val records by viewModel.records.collectAsState()
     val memberStats by viewModel.memberStats.collectAsState()
     val total by viewModel.total.collectAsState()
@@ -107,16 +113,16 @@ fun CategoryDetailScreen(
                 }
             }
 
-            // 第二部分：扇形图
+            // 第二部分：成员统计
             item {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        .padding(16.dp)
                 ) {
                     Column(
                         modifier = Modifier
+                            .fillMaxWidth()
                             .padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -125,19 +131,33 @@ fun CategoryDetailScreen(
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
+                        
+                        // 饼状图
                         CategoryPieChart(
-                            categoryData = memberStats.map { Pair(it.category, it.percentage.toFloat()) },
-                            memberData = emptyList(),
-                            currentViewMode = false,
+                            categoryData = emptyList(),
+                            memberData = memberStats.map { Pair(it.member, it.percentage.toFloat()) },
+                            currentViewMode = true,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp),
                             onCategoryClick = { memberName -> 
-                                if (records.isNotEmpty() && records.first().type == TransactionType.EXPENSE) {
-                                    onNavigateToMemberDetail(memberName)
-                                }
+                                onNavigateToMemberDetail(memberName)
                             }
                         )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        HorizontalDivider()
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // 成员列表
+                        Column {
+                            memberStats.forEach { stat ->
+                                MemberStatItem(
+                                    stat = stat,
+                                    onClick = { onNavigateToMemberDetail(stat.member) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -206,6 +226,29 @@ fun CategoryDetailScreen(
             }
         }
     }
+}
+
+@Composable
+private fun MemberStatItem(
+    stat: MemberStat,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    ListItem(
+        headlineContent = { Text(stat.member) },
+        supportingContent = {
+            Text(
+                buildString {
+                    append("金额: ¥%.2f".format(stat.amount))
+                    append(" | ")
+                    append("次数: ${stat.count}")
+                    append(" | ")
+                    append("占比: %.1f%%".format(stat.percentage))
+                }
+            )
+        },
+        modifier = modifier.clickable(onClick = onClick)
+    )
 }
 
 @Composable
