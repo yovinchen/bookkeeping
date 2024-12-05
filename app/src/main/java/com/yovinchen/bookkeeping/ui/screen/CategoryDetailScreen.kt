@@ -132,7 +132,11 @@ fun CategoryDetailScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(200.dp),
-                            onCategoryClick = { memberName -> onNavigateToMemberDetail(memberName) }
+                            onCategoryClick = { memberName -> 
+                                if (records.isNotEmpty() && records.first().type == TransactionType.EXPENSE) {
+                                    onNavigateToMemberDetail(memberName)
+                                }
+                            }
                         )
                     }
                 }
