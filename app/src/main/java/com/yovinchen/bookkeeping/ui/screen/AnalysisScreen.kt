@@ -33,12 +33,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yovinchen.bookkeeping.model.AnalysisType
+import com.yovinchen.bookkeeping.model.CategoryStat
+import com.yovinchen.bookkeeping.model.MemberStat
 import com.yovinchen.bookkeeping.ui.components.CategoryPieChart
 import com.yovinchen.bookkeeping.ui.components.CategoryStatItem
-import com.yovinchen.bookkeeping.ui.components.MonthYearPicker
+import com.yovinchen.bookkeeping.ui.components.DateRangePicker
 import com.yovinchen.bookkeeping.viewmodel.AnalysisViewModel
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
 
 enum class ViewMode {
     CATEGORY, MEMBER
@@ -51,12 +52,12 @@ fun AnalysisScreen(
     onNavigateToMemberDetail: (String, YearMonth, AnalysisType) -> Unit
 ) {
     val viewModel: AnalysisViewModel = viewModel()
-    val selectedMonth by viewModel.selectedMonth.collectAsState()
+    val startMonth by viewModel.startMonth.collectAsState()
+    val endMonth by viewModel.endMonth.collectAsState()
     val selectedAnalysisType by viewModel.selectedAnalysisType.collectAsState()
     val categoryStats by viewModel.categoryStats.collectAsState()
     val memberStats by viewModel.memberStats.collectAsState()
 
-    var showMonthPicker by remember { mutableStateOf(false) }
     var showViewModeMenu by remember { mutableStateOf(false) }
     var currentViewMode by rememberSaveable { mutableStateOf(ViewMode.CATEGORY) }
 
@@ -66,18 +67,13 @@ fun AnalysisScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 时间选择按钮行
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(onClick = { showMonthPicker = true }) {
-                    Text(selectedMonth.format(DateTimeFormatter.ofPattern("yyyy年MM月")))
-                }
-            }
+            // 时间区间选择
+            DateRangePicker(
+                startMonth = startMonth,
+                endMonth = endMonth,
+                onStartMonthSelected = viewModel::setStartMonth,
+                onEndMonthSelected = viewModel::setEndMonth
+            )
 
             // 分析类型和视图模式选择行
             Row(
@@ -147,7 +143,7 @@ fun AnalysisScreen(
                     item {
                         CategoryPieChart(
                             categoryData = categoryStats.map { Pair(it.category, it.percentage.toFloat()) },
-                            memberData = memberStats.map { Pair(it.category, it.percentage.toFloat()) },
+                            memberData = memberStats.map { Pair(it.member, it.percentage.toFloat()) },
                             currentViewMode = currentViewMode == ViewMode.MEMBER,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -155,9 +151,9 @@ fun AnalysisScreen(
                                 .padding(bottom = 16.dp),
                             onCategoryClick = { category ->
                                 if (currentViewMode == ViewMode.CATEGORY) {
-                                    onNavigateToCategoryDetail(category, selectedMonth)
+                                    onNavigateToCategoryDetail(category, startMonth)
                                 } else {
-                                    onNavigateToMemberDetail(category, selectedMonth, selectedAnalysisType)
+                                    onNavigateToMemberDetail(category, startMonth, selectedAnalysisType)
                                 }
                             }
                         )
@@ -166,28 +162,20 @@ fun AnalysisScreen(
 
                 // 添加统计列表项目
                 items(if (currentViewMode == ViewMode.CATEGORY) categoryStats else memberStats) { stat ->
+                    val category = if (stat is CategoryStat) stat.category else null
+                    val member = if (stat is MemberStat) stat.member else null
+
                     CategoryStatItem(
                         stat = stat,
                         onClick = {
-                            if (currentViewMode == ViewMode.CATEGORY) {
-                                onNavigateToCategoryDetail(stat.category, selectedMonth)
-                            } else {
-                                onNavigateToMemberDetail(stat.category, selectedMonth, selectedAnalysisType)
+                            if (currentViewMode == ViewMode.CATEGORY && category != null) {
+                                onNavigateToCategoryDetail(category, startMonth)
+                            } else if (currentViewMode == ViewMode.MEMBER && member != null) {
+                                onNavigateToMemberDetail(member, startMonth, selectedAnalysisType)
                             }
                         }
                     )
                 }
-            }
-
-            if (showMonthPicker) {
-                MonthYearPicker(
-                    selectedMonth = selectedMonth,
-                    onMonthSelected = { month ->
-                        viewModel.setSelectedMonth(month)
-                        showMonthPicker = false
-                    },
-                    onDismiss = { showMonthPicker = false }
-                )
             }
         }
     }
