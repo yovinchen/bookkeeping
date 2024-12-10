@@ -137,6 +137,18 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                                     database.memberDao().apply {
                                         if (getMemberCount() == 0) {
                                             insertMember(Member(name = "自己", description = "默认成员"))
+                                            insertMember(Member(name = "老婆", description = "默认成员"))
+                                            insertMember(Member(name = "老公", description = "默认成员"))
+                                            insertMember(Member(name = "家庭", description = "默认成员"))
+                                            insertMember(Member(name = "儿子", description = "默认成员"))
+                                            insertMember(Member(name = "女儿", description = "默认成员"))
+                                            insertMember(Member(name = "爸爸", description = "默认成员"))
+                                            insertMember(Member(name = "妈妈", description = "默认成员"))
+                                            insertMember(Member(name = "爷爷", description = "默认成员"))
+                                            insertMember(Member(name = "奶奶", description = "默认成员"))
+                                            insertMember(Member(name = "外公", description = "默认成员"))
+                                            insertMember(Member(name = "外婆", description = "默认成员"))
+                                            insertMember(Member(name = "其他人", description = "默认成员"))
                                         }
                                     }
 
