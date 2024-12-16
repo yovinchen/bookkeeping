@@ -8,6 +8,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.yovinchen.bookkeeping.R
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.Category
 import com.yovinchen.bookkeeping.model.Converters
@@ -19,7 +20,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [BookkeepingRecord::class, Category::class, Member::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -38,14 +39,15 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                     CREATE TABLE IF NOT EXISTS members (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         name TEXT NOT NULL,
-                        description TEXT NOT NULL DEFAULT ''
+                        description TEXT NOT NULL DEFAULT '',
+                        icon INTEGER NOT NULL DEFAULT 0
                     )
                 """)
                 
                 // 插入默认成员
                 db.execSQL("""
-                    INSERT INTO members (name, description)
-                    VALUES ('自己', '默认成员')
+                    INSERT INTO members (name, description, icon)
+                    VALUES ('自己', '默认成员', ${R.drawable.ic_member_boy_24dp})
                 """)
 
                 // 修改记账记录表，添加成员ID字段
@@ -96,14 +98,15 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                     CREATE TABLE IF NOT EXISTS categories_new (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         name TEXT NOT NULL,
-                        type TEXT NOT NULL
+                        type TEXT NOT NULL,
+                        icon INTEGER NOT NULL DEFAULT 0
                     )
                 """)
 
                 // 复制分类数据
                 db.execSQL("""
-                    INSERT INTO categories_new (id, name, type)
-                    SELECT id, name, type FROM categories
+                    INSERT INTO categories_new (id, name, type, icon)
+                    SELECT id, name, type, 0 FROM categories
                 """)
 
                 // 删除旧表
@@ -111,6 +114,13 @@ abstract class BookkeepingDatabase : RoomDatabase() {
 
                 // 重命名新表
                 db.execSQL("ALTER TABLE categories_new RENAME TO categories")
+            }
+        }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 如果需要，在这里添加数据库迁移逻辑
+                // 由于这次更改可能只是schema hash的变化，我们不需要实际的数据库更改
             }
         }
 
@@ -124,7 +134,7 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                     BookkeepingDatabase::class.java,
                     "bookkeeping_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
@@ -136,40 +146,52 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                                     // 初始化默认成员
                                     database.memberDao().apply {
                                         if (getMemberCount() == 0) {
-                                            insertMember(Member(name = "自己", description = "默认成员"))
-                                            insertMember(Member(name = "老婆", description = "默认成员"))
-                                            insertMember(Member(name = "老公", description = "默认成员"))
-                                            insertMember(Member(name = "家庭", description = "默认成员"))
-                                            insertMember(Member(name = "儿子", description = "默认成员"))
-                                            insertMember(Member(name = "女儿", description = "默认成员"))
-                                            insertMember(Member(name = "爸爸", description = "默认成员"))
-                                            insertMember(Member(name = "妈妈", description = "默认成员"))
-                                            insertMember(Member(name = "爷爷", description = "默认成员"))
-                                            insertMember(Member(name = "奶奶", description = "默认成员"))
-                                            insertMember(Member(name = "外公", description = "默认成员"))
-                                            insertMember(Member(name = "外婆", description = "默认成员"))
-                                            insertMember(Member(name = "其他人", description = "默认成员"))
+                                            insertMember(Member(name = "自己", description = "默认成员", icon = R.drawable.ic_member_boy_24dp))
+                                            insertMember(Member(name = "老婆", description = "默认成员", icon = R.drawable.ic_member_girl_24dp))
+                                            insertMember(Member(name = "老公", description = "默认成员", icon = R.drawable.ic_member_boy_24dp))
+                                            insertMember(Member(name = "家庭", description = "默认成员", icon = R.drawable.ic_member_family_24dp))
+                                            insertMember(Member(name = "儿子", description = "默认成员", icon = R.drawable.ic_member_baby_boy_24dp))
+                                            insertMember(Member(name = "女儿", description = "默认成员", icon = R.drawable.ic_member_baby_girl_24dp))
+                                            insertMember(Member(name = "爸爸", description = "默认成员", icon = R.drawable.ic_member_father_24dp))
+                                            insertMember(Member(name = "妈妈", description = "默认成员", icon = R.drawable.ic_member_mother_24dp))
+                                            insertMember(Member(name = "爷爷", description = "默认成员", icon = R.drawable.ic_member_grandfather_24dp))
+                                            insertMember(Member(name = "奶奶", description = "默认成员", icon = R.drawable.ic_member_grandmother_24dp))
+                                            insertMember(Member(name = "外公", description = "默认成员", icon = R.drawable.ic_member_grandfather_24dp))
+                                            insertMember(Member(name = "外婆", description = "默认成员", icon = R.drawable.ic_member_grandmother_24dp))
+                                            insertMember(Member(name = "其他人", description = "默认成员", icon = R.drawable.ic_member_boy_24dp))
                                         }
                                     }
 
-                                    // 初始化默认分类
+// 初始化默认分类
                                     database.categoryDao().apply {
                                         // 支出分类
-                                        insertCategory(Category(name = "餐饮", type = TransactionType.EXPENSE))
-                                        insertCategory(Category(name = "交通", type = TransactionType.EXPENSE))
-                                        insertCategory(Category(name = "购物", type = TransactionType.EXPENSE))
-                                        insertCategory(Category(name = "娱乐", type = TransactionType.EXPENSE))
-                                        insertCategory(Category(name = "居住", type = TransactionType.EXPENSE))
-                                        insertCategory(Category(name = "医疗", type = TransactionType.EXPENSE))
-                                        insertCategory(Category(name = "教育", type = TransactionType.EXPENSE))
-                                        insertCategory(Category(name = "其他支出", type = TransactionType.EXPENSE))
+                                        insertCategory(Category(name = "餐饮", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_food_24dp))
+                                        insertCategory(Category(name = "交通", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_taxi_24dp))
+                                        insertCategory(Category(name = "购物", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_supermarket_24dp))
+                                        insertCategory(Category(name = "娱乐", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_bar_24dp))
+                                        insertCategory(Category(name = "居住", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_hotel_24dp))
+                                        insertCategory(Category(name = "医疗", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_medicine_24dp))
+                                        insertCategory(Category(name = "教育", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_training_24dp))
+                                        insertCategory(Category(name = "宠物", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_pet_24dp))
+                                        insertCategory(Category(name = "花卉", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_flower_24dp))
+                                        insertCategory(Category(name = "酒吧", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_bar_24dp))
+                                        insertCategory(Category(name = "快递", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_delivery_24dp))
+                                        insertCategory(Category(name = "数码", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_digital_24dp))
+                                        insertCategory(Category(name = "化妆品", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_cosmetics_24dp))
+                                        insertCategory(Category(name = "水果", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_fruit_24dp))
+                                        insertCategory(Category(name = "零食", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_snack_24dp))
+                                        insertCategory(Category(name = "蔬菜", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_vegetable_24dp))
+                                        insertCategory(Category(name = "其他支出", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_more_24dp))
 
                                         // 收入分类
-                                        insertCategory(Category(name = "工资", type = TransactionType.INCOME))
-                                        insertCategory(Category(name = "奖金", type = TransactionType.INCOME))
-                                        insertCategory(Category(name = "投资", type = TransactionType.INCOME))
-                                        insertCategory(Category(name = "其他收入", type = TransactionType.INCOME))
+                                        insertCategory(Category(name = "工资", type = TransactionType.INCOME, icon = R.drawable.ic_category_membership_24dp))
+                                        insertCategory(Category(name = "奖金", type = TransactionType.INCOME, icon = R.drawable.ic_category_gift_24dp))
+                                        insertCategory(Category(name = "投资", type = TransactionType.INCOME, icon = R.drawable.ic_category_digital_24dp))
+                                        insertCategory(Category(name = "礼物", type = TransactionType.INCOME, icon = R.drawable.ic_category_gift_24dp))
+                                        insertCategory(Category(name = "会员费", type = TransactionType.INCOME, icon = R.drawable.ic_category_membership_24dp))
+                                        insertCategory(Category(name = "其他收入", type = TransactionType.INCOME, icon = R.drawable.ic_category_more_24dp))
                                     }
+
                                     
                                     Log.d(TAG, "Default data initialized successfully")
                                 } catch (e: Exception) {

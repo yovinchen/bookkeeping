@@ -1,7 +1,6 @@
 package com.yovinchen.bookkeeping.viewmodel
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
@@ -19,7 +18,6 @@ import java.util.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
-    private val TAG = "HomeViewModel"
     private val bookkeepingDao = BookkeepingDatabase.getDatabase(application).bookkeepingDao()
     private val memberDao = BookkeepingDatabase.getDatabase(application).memberDao()
     private val categoryDao = BookkeepingDatabase.getDatabase(application).categoryDao()

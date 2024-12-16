@@ -152,9 +152,13 @@ fun SettingsScreen(
         CategoryManagementDialog(
             onDismiss = { showCategoryDialog = false },
             categories = categories,
-            onAddCategory = viewModel::addCategory,
+            onAddCategory = { name, type, iconResId -> 
+                viewModel.addCategory(name, type, iconResId)
+            },
             onDeleteCategory = viewModel::deleteCategory,
-            onUpdateCategory = viewModel::updateCategory,
+            onUpdateCategory = { category, newName, iconResId ->
+                viewModel.updateCategory(category, newName, iconResId)
+            },
             selectedType = selectedType,
             onTypeChange = viewModel::setSelectedCategoryType
         )
@@ -165,10 +169,16 @@ fun SettingsScreen(
         MemberManagementDialog(
             onDismiss = { showMemberDialog = false },
             members = members,
-            onAddMember = memberViewModel::addMember,
+            onAddMember = { name, description, iconResId ->
+                memberViewModel.addMember(name, description, iconResId)
+            },
             onDeleteMember = memberViewModel::deleteMember,
-            onUpdateMember = { member, name, description ->
-                memberViewModel.updateMember(member.copy(name = name, description = description))
+            onUpdateMember = { member, name, description, iconResId ->
+                memberViewModel.updateMember(member.copy(
+                    name = name,
+                    description = description,
+                    icon = iconResId
+                ))
             }
         )
     }

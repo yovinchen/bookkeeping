@@ -8,5 +8,6 @@ data class Member(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val name: String,
-    val description: String = ""  // 可选的描述信息
+    val description: String = "",  // 可选的描述信息
+    val icon: Int? = null  // 新增icon字段，可为空
 )

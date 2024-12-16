@@ -1,20 +1,13 @@
 package com.yovinchen.bookkeeping.ui.navigation
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Analytics
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -22,20 +15,38 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.yovinchen.bookkeeping.R
 import com.yovinchen.bookkeeping.model.AnalysisType
 import com.yovinchen.bookkeeping.model.ThemeMode
 import com.yovinchen.bookkeeping.ui.screen.*
+import androidx.compose.material3.*
+import androidx.compose.ui.unit.dp
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 sealed class Screen(
     val route: String,
     val title: String,
-    val icon: ImageVector? = null
+    val iconResId: Int? = null
 ) {
-    object Home : Screen("home", "记账", Icons.AutoMirrored.Filled.List)
-    object Analysis : Screen("analysis", "分析", Icons.Default.Analytics)
-    object Settings : Screen("settings", "设置", Icons.Default.Settings)
+    @Composable
+    fun icon(): ImageVector? = iconResId?.let { ImageVector.vectorResource(it) }
+
+    object Home : Screen(
+        "home", 
+        "记账",
+        iconResId = R.drawable.account
+    )
+    object Analysis : Screen(
+        "analysis", 
+        "分析",
+        iconResId = R.drawable.piechart
+    )
+    object Settings : Screen(
+        "settings", 
+        "设置",
+        iconResId = R.drawable.setting
+    )
     object CategoryDetail : Screen(
         "category_detail/{category}/{startMonth}/{endMonth}",
         "分类详情"
@@ -75,18 +86,33 @@ fun MainNavigation(
     onThemeChange: (ThemeMode) -> Unit
 ) {
     val navController = rememberNavController()
-
+    val items = listOf(
+        Screen.Home,
+        Screen.Analysis,
+        Screen.Settings
+    )
+    
     Scaffold(
         bottomBar = {
             NavigationBar {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
-
-                Screen.bottomNavigationItems().forEach { screen ->
+                
+                items.forEach { screen ->
+                    val selected = currentRoute == screen.route
                     NavigationBarItem(
-                        icon = { Icon(screen.icon!!, contentDescription = screen.title) },
+                        icon = { 
+                            screen.icon()?.let { icon ->
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = screen.title,
+                                    modifier = Modifier.size(24.dp),
+                                    tint = Color.Unspecified
+                                )
+                            }
+                        },
                         label = { Text(screen.title) },
-                        selected = currentRoute == screen.route,
+                        selected = selected,
                         onClick = {
                             navController.navigate(screen.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {

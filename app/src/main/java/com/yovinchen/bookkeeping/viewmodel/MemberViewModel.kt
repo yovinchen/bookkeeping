@@ -13,9 +13,9 @@ class MemberViewModel(application: Application) : AndroidViewModel(application) 
     
     val allMembers: Flow<List<Member>> = memberDao.getAllMembers()
 
-    fun addMember(name: String, description: String = "") {
+    fun addMember(name: String, description: String = "", iconResId: Int? = null) {
         viewModelScope.launch {
-            val member = Member(name = name, description = description)
+            val member = Member(name = name, description = description, icon = iconResId)
             memberDao.insertMember(member)
         }
     }

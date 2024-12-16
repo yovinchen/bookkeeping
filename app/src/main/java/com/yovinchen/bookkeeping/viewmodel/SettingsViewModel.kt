@@ -32,9 +32,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         _selectedCategoryType.value = type
     }
 
-    fun addCategory(name: String, type: TransactionType) {
+    fun addCategory(name: String, type: TransactionType, iconResId: Int?) {
         viewModelScope.launch {
-            val category = Category(name = name, type = type)
+            val category = Category(name = name, type = type, icon = iconResId)
             dao.insertCategory(category)
         }
     }
@@ -45,9 +45,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun updateCategory(category: Category, newName: String) {
+    fun updateCategory(category: Category, newName: String, iconResId: Int?) {
         viewModelScope.launch {
-            val updatedCategory = category.copy(name = newName)
+            val updatedCategory = category.copy(name = newName, icon = iconResId)
             dao.updateCategory(updatedCategory)
             // 更新所有使用该类别的记录
             dao.updateRecordCategories(category.name, newName)

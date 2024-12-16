@@ -6,10 +6,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.Member
 import com.yovinchen.bookkeeping.model.TransactionType
+import com.yovinchen.bookkeeping.utils.IconManager
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -24,6 +28,7 @@ fun RecordItem(
     var showDeleteDialog by remember { mutableStateOf(false) }
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val member = members.find { it.id == record.memberId }
+    val categoryIcon = IconManager.getCategoryIconVector(record.category)
 
     Card(
         modifier = modifier
@@ -36,9 +41,20 @@ fun RecordItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // 左侧分类图标
+            if (categoryIcon != null) {
+                Icon(
+                    imageVector = categoryIcon,
+                    contentDescription = record.category,
+                    modifier = Modifier.size(24.dp),
+                    tint = Color.Unspecified
+                )
+            }
+
+            // 中间内容区域
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -64,7 +80,7 @@ fun RecordItem(
                 )
             }
 
-            // 金额显示
+            // 右侧金额显示
             Text(
                 text = String.format("%.2f", record.amount),
                 style = MaterialTheme.typography.titleMedium,
