@@ -171,11 +171,10 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                                         insertCategory(Category(name = "娱乐", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_bar_24dp))       // "娱乐" to R.drawable.ic_category_bar_24dp
                                         insertCategory(Category(name = "居住", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_hotel_24dp))     // "居住" to R.drawable.ic_category_hotel_24dp
                                         insertCategory(Category(name = "医疗", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_medicine_24dp))  // "医疗" to R.drawable.ic_category_medicine_24dp
-                                        insertCategory(Category(name = "教育", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_training_24dp))  // "培训" to R.drawable.ic_category_training_24dp
+                                        insertCategory(Category(name = "教育", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_training_24dp))  // "教育" to R.drawable.ic_category_training_24dp
                                         insertCategory(Category(name = "宠物", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_pet_24dp))       // "宠物" to R.drawable.ic_category_pet_24dp
-                                        insertCategory(Category(name = "花卉", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_flower_24dp))    // "鲜花" to R.drawable.ic_category_flower_24dp
-                                        insertCategory(Category(name = "酒吧", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_bar_24dp))       // "娱乐" to R.drawable.ic_category_bar_24dp
-                                        insertCategory(Category(name = "快递", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_delivery_24dp))  // "外卖" to R.drawable.ic_category_delivery_24dp
+                                        insertCategory(Category(name = "鲜花", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_flower_24dp))    // "鲜花" to R.drawable.ic_category_flower_24dp
+                                        insertCategory(Category(name = "外卖", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_delivery_24dp))  // "外卖" to R.drawable.ic_category_delivery_24dp
                                         insertCategory(Category(name = "数码", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_digital_24dp))   // "数码" to R.drawable.ic_category_digital_24dp
                                         insertCategory(Category(name = "化妆品", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_cosmetics_24dp)) // "化妆品" to R.drawable.ic_category_cosmetics_24dp
                                         insertCategory(Category(name = "水果", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_fruit_24dp))     // "水果" to R.drawable.ic_category_fruit_24dp
