@@ -1,36 +1,23 @@
 package com.yovinchen.bookkeeping.ui.screen
 
+import android.content.Context
+import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yovinchen.bookkeeping.model.ThemeMode
-import com.yovinchen.bookkeeping.ui.components.ColorPicker
-import com.yovinchen.bookkeeping.ui.components.predefinedColors
-import com.yovinchen.bookkeeping.ui.dialog.CategoryManagementDialog
-import com.yovinchen.bookkeeping.ui.dialog.MemberManagementDialog
-import com.yovinchen.bookkeeping.viewmodel.MemberViewModel
-import com.yovinchen.bookkeeping.viewmodel.SettingsViewModel
+import com.yovinchen.bookkeeping.ui.components.*
+import com.yovinchen.bookkeeping.ui.dialog.*
+import com.yovinchen.bookkeeping.utils.FilePickerUtil
+import com.yovinchen.bookkeeping.viewmodel.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,10 +30,13 @@ fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showCategoryDialog by remember { mutableStateOf(false) }
     var showMemberDialog by remember { mutableStateOf(false) }
+    var showBackupDialog by remember { mutableStateOf(false) }
+    var showRestoreDialog by remember { mutableStateOf(false) }
     
     val categories by viewModel.categories.collectAsState()
     val selectedType by viewModel.selectedCategoryType.collectAsState()
     val members by memberViewModel.allMembers.collectAsState(initial = emptyList())
+    val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 成员管理设置项
@@ -56,7 +46,7 @@ fun SettingsScreen(
             modifier = Modifier.clickable { showMemberDialog = true }
         )
 
-        Divider()
+        HorizontalDivider()
 
         // 类别管理设置项
         ListItem(
@@ -65,7 +55,16 @@ fun SettingsScreen(
             modifier = Modifier.clickable { showCategoryDialog = true }
         )
 
-        Divider()
+        HorizontalDivider()
+
+        // 数据备份设置项
+        ListItem(
+            headlineContent = { Text("数据备份") },
+            supportingContent = { Text("备份和恢复数据") },
+            modifier = Modifier.clickable { showBackupDialog = true }
+        )
+
+        HorizontalDivider()
 
         // 主题设置项
         ListItem(
@@ -117,7 +116,7 @@ fun SettingsScreen(
                             }
                         )
 
-                        Divider(modifier = Modifier.padding(vertical = 8.dp))
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                         // 颜色选择器
                         Text(
@@ -145,42 +144,137 @@ fun SettingsScreen(
                 }
             )
         }
-    }
 
-    // 类别管理对话框
-    if (showCategoryDialog) {
-        CategoryManagementDialog(
-            onDismiss = { showCategoryDialog = false },
-            categories = categories,
-            onAddCategory = { name, type, iconResId -> 
-                viewModel.addCategory(name, type, iconResId)
-            },
-            onDeleteCategory = viewModel::deleteCategory,
-            onUpdateCategory = { category, newName, iconResId ->
-                viewModel.updateCategory(category, newName, iconResId)
-            },
-            selectedType = selectedType,
-            onTypeChange = viewModel::setSelectedCategoryType
-        )
-    }
+        // 备份对话框
+        if (showBackupDialog) {
+            AlertDialog(
+                onDismissRequest = { showBackupDialog = false },
+                title = { Text("数据备份") },
+                text = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.exportToCSV(context) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("导出为CSV")
+                        }
+                        Button(
+                            onClick = { viewModel.exportToExcel(context) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("导出为Excel")
+                        }
+                        Button(
+                            onClick = { showRestoreDialog = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("恢复数据")
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("自动备份", modifier = Modifier.weight(1f))
+                            Switch(
+                                checked = viewModel.isAutoBackupEnabled.collectAsState().value,
+                                onCheckedChange = { viewModel.setAutoBackup(it) }
+                            )
+                        }
+                        if (viewModel.isAutoBackupEnabled.collectAsState().value) {
+                            Text(
+                                "自动备份将每24小时创建一次备份，保存在应用私有目录中",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showBackupDialog = false }) {
+                        Text("关闭")
+                    }
+                }
+            )
+        }
 
-    // 成员管理对话框
-    if (showMemberDialog) {
-        MemberManagementDialog(
-            onDismiss = { showMemberDialog = false },
-            members = members,
-            onAddMember = { name, description, iconResId ->
-                memberViewModel.addMember(name, description, iconResId)
-            },
-            onDeleteMember = memberViewModel::deleteMember,
-            onUpdateMember = { member, name, description, iconResId ->
-                memberViewModel.updateMember(member.copy(
-                    name = name,
-                    description = description,
-                    icon = iconResId
-                ))
-            }
-        )
+        // 恢复对话框
+        if (showRestoreDialog) {
+            AlertDialog(
+                onDismissRequest = { showRestoreDialog = false },
+                title = { Text("恢复数据") },
+                text = {
+                    Column {
+                        Text("请选择要恢复的备份文件（CSV或Excel格式）")
+                        Text(
+                            "注意：恢复数据将覆盖当前的所有数据！",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showRestoreDialog = false
+                            // 启动文件选择器
+                            val activity = context as? ComponentActivity
+                            if (activity != null) {
+                                FilePickerUtil.startFilePicker(activity) { file ->
+                                    viewModel.restoreData(context, file)
+                                }
+                            } else {
+                                Toast.makeText(context, "无法启动文件选择器", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    ) {
+                        Text("选择文件")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showRestoreDialog = false }) {
+                        Text("取消")
+                    }
+                }
+            )
+        }
+
+        // 类别管理对话框
+        if (showCategoryDialog) {
+            CategoryManagementDialog(
+                onDismiss = { showCategoryDialog = false },
+                categories = categories,
+                onAddCategory = { name, type, iconResId -> 
+                    viewModel.addCategory(name, type, iconResId)
+                },
+                onDeleteCategory = viewModel::deleteCategory,
+                onUpdateCategory = { category, newName, iconResId ->
+                    viewModel.updateCategory(category, newName, iconResId)
+                },
+                selectedType = selectedType,
+                onTypeChange = viewModel::setSelectedCategoryType
+            )
+        }
+
+        // 成员管理对话框
+        if (showMemberDialog) {
+            MemberManagementDialog(
+                onDismiss = { showMemberDialog = false },
+                members = members,
+                onAddMember = { name, description, iconResId ->
+                    memberViewModel.addMember(name, description, iconResId)
+                },
+                onDeleteMember = memberViewModel::deleteMember,
+                onUpdateMember = { member, name, description, iconResId ->
+                    memberViewModel.updateMember(member.copy(
+                        name = name,
+                        description = description,
+                        icon = iconResId
+                    ))
+                }
+            )
+        }
     }
 }
 

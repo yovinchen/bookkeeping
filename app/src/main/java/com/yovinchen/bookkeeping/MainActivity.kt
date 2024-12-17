@@ -1,9 +1,12 @@
 package com.yovinchen.bookkeeping
 
 import android.app.Activity
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +22,31 @@ import com.yovinchen.bookkeeping.model.ThemeMode
 import com.yovinchen.bookkeeping.ui.components.predefinedColors
 import com.yovinchen.bookkeeping.ui.navigation.MainNavigation
 import com.yovinchen.bookkeeping.ui.theme.BookkeepingTheme
+import com.yovinchen.bookkeeping.utils.FilePickerUtil
+
+private var filePickerLauncher: ActivityResultLauncher<Array<String>>? = null
+
+fun ComponentActivity.getPreregisteredFilePickerLauncher(): ActivityResultLauncher<Array<String>> {
+    return filePickerLauncher ?: throw IllegalStateException("FilePickerLauncher not initialized")
+}
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // 预注册文件选择器
+        filePickerLauncher = registerForActivityResult(
+            ActivityResultContracts.OpenDocument()
+        ) { uri: Uri? ->
+            FilePickerUtil.handleFileSelection(this, uri)
+        }
+
+        setContent {
+            BookkeepingApp()
+        }
+    }
+}
 
 @Composable
 private fun SystemBarColor(isDarkTheme: Boolean) {
@@ -84,16 +112,6 @@ fun BookkeepingApp() {
                 currentTheme = themeMode,
                 onThemeChange = { themeMode = it }
             )
-        }
-    }
-}
-
-class MainActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        setContent {
-            BookkeepingApp()
         }
     }
 }

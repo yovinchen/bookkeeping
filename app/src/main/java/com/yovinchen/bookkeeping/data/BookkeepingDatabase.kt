@@ -181,14 +181,14 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                                         insertCategory(Category(name = "水果", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_fruit_24dp))
                                         insertCategory(Category(name = "零食", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_snack_24dp))
                                         insertCategory(Category(name = "蔬菜", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_vegetable_24dp))
+                                        insertCategory(Category(name = "会员", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_membership_24dp))
+                                        insertCategory(Category(name = "礼物", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_gift_24dp))
                                         insertCategory(Category(name = "其他支出", type = TransactionType.EXPENSE, icon = R.drawable.ic_category_more_24dp))
 
                                         // 收入分类
                                         insertCategory(Category(name = "工资", type = TransactionType.INCOME, icon = R.drawable.ic_category_membership_24dp))
                                         insertCategory(Category(name = "奖金", type = TransactionType.INCOME, icon = R.drawable.ic_category_gift_24dp))
                                         insertCategory(Category(name = "投资", type = TransactionType.INCOME, icon = R.drawable.ic_category_digital_24dp))
-                                        insertCategory(Category(name = "礼物", type = TransactionType.INCOME, icon = R.drawable.ic_category_gift_24dp))
-                                        insertCategory(Category(name = "会员费", type = TransactionType.INCOME, icon = R.drawable.ic_category_membership_24dp))
                                         insertCategory(Category(name = "其他收入", type = TransactionType.INCOME, icon = R.drawable.ic_category_more_24dp))
                                     }
 

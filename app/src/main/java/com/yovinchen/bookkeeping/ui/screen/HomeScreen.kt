@@ -54,7 +54,6 @@ fun HomeScreen(
     val filteredRecords by viewModel.filteredRecords.collectAsState()
     val categories by viewModel.categories.collectAsState(initial = emptyList())
     val members by viewModel.members.collectAsState(initial = emptyList())
-    val selectedMember by viewModel.selectedMember.collectAsState()
     val totalIncome by viewModel.totalIncome.collectAsState()
     val totalExpense by viewModel.totalExpense.collectAsState()
 

@@ -144,7 +144,7 @@ fun MemberDetailScreen(
                                 categoryData = categoryData,
                                 memberData = emptyList(),
                                 currentViewMode = false,
-                                onCategoryClick = { selectedCategory ->
+                                onCategoryClick = {
                                     // 暂时不处理点击事件
                                 }
                             )
