@@ -4,12 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
-import com.yovinchen.bookkeeping.data.SettingsRepository
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.Category
 import com.yovinchen.bookkeeping.model.Member
 import com.yovinchen.bookkeeping.model.TransactionType
-import com.yovinchen.bookkeeping.utils.DateUtils
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -20,26 +18,9 @@ import java.util.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
-    private val database = BookkeepingDatabase.getDatabase(application)
-    private val bookkeepingDao = database.bookkeepingDao()
-    private val memberDao = database.memberDao()
-    private val categoryDao = database.categoryDao()
-    private val settingsRepository = SettingsRepository(database.settingsDao())
-    
-    // 设置相关
-    private val _monthStartDay = MutableStateFlow(1)
-    val monthStartDay: StateFlow<Int> = _monthStartDay.asStateFlow()
-    
-    init {
-        viewModelScope.launch {
-            settingsRepository.ensureSettingsExist()
-            settingsRepository.getSettings().collect { settings ->
-                settings?.let {
-                    _monthStartDay.value = it.monthStartDay
-                }
-            }
-        }
-    }
+    private val bookkeepingDao = BookkeepingDatabase.getDatabase(application).bookkeepingDao()
+    private val memberDao = BookkeepingDatabase.getDatabase(application).memberDao()
+    private val categoryDao = BookkeepingDatabase.getDatabase(application).categoryDao()
 
     private val _selectedRecordType = MutableStateFlow<TransactionType?>(null)
     val selectedRecordType: StateFlow<TransactionType?> = _selectedRecordType.asStateFlow()
@@ -75,13 +56,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         allRecords,
         _selectedRecordType,
         _selectedMonth,
-        _selectedMember,
-        _monthStartDay
-    ) { records, selectedType, selectedMonth, selectedMember, monthStartDay ->
+        _selectedMember
+    ) { records, selectedType, selectedMonth, selectedMember ->
         records
             .filter { record ->
+                val recordDate = record.date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+                val recordYearMonth = YearMonth.from(recordDate)
+
                 val typeMatches = selectedType?.let { record.type == it } ?: true
-                val monthMatches = DateUtils.isInAccountingMonth(record.date, selectedMonth, monthStartDay)
+                val monthMatches = recordYearMonth == selectedMonth
                 val memberMatches = selectedMember?.let { record.memberId == it.id } ?: true
 
                 monthMatches && memberMatches && typeMatches
@@ -105,12 +90,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val totalIncome = combine(
         allRecords,
         _selectedMonth,
-        _selectedMember,
-        _monthStartDay
-    ) { records, selectedMonth, selectedMember, monthStartDay ->
+        _selectedMember
+    ) { records, selectedMonth, selectedMember ->
         records
             .filter { record ->
-                val monthMatches = DateUtils.isInAccountingMonth(record.date, selectedMonth, monthStartDay)
+                val recordDate = record.date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+                val recordYearMonth = YearMonth.from(recordDate)
+                
+                val monthMatches = recordYearMonth == selectedMonth
                 val memberMatches = selectedMember?.let { record.memberId == it.id } ?: true
                 val typeMatches = record.type == TransactionType.INCOME
 
@@ -126,12 +115,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val totalExpense = combine(
         allRecords,
         _selectedMonth,
-        _selectedMember,
-        _monthStartDay
-    ) { records, selectedMonth, selectedMember, monthStartDay ->
+        _selectedMember
+    ) { records, selectedMonth, selectedMember ->
         records
             .filter { record ->
-                val monthMatches = DateUtils.isInAccountingMonth(record.date, selectedMonth, monthStartDay)
+                val recordDate = record.date.toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+                val recordYearMonth = YearMonth.from(recordDate)
+                
+                val monthMatches = recordYearMonth == selectedMonth
                 val memberMatches = selectedMember?.let { record.memberId == it.id } ?: true
                 val typeMatches = record.type == TransactionType.EXPENSE
 

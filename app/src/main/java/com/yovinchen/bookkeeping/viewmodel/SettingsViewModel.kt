@@ -9,10 +9,8 @@ import androidx.lifecycle.viewModelScope
 import com.opencsv.CSVReader
 import com.opencsv.CSVWriter
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
-import com.yovinchen.bookkeeping.data.SettingsRepository
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.Category
-import com.yovinchen.bookkeeping.model.Settings
 import com.yovinchen.bookkeeping.model.TransactionType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,36 +38,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val database = BookkeepingDatabase.getDatabase(application)
     private val dao = database.bookkeepingDao()
     private val memberDao = database.memberDao()
-    private val settingsRepository = SettingsRepository(database.settingsDao())
-    
-    // 设置相关的状态
-    val settings: StateFlow<Settings?> = settingsRepository.getSettings()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = null
-        )
-    
     private val _isAutoBackupEnabled = MutableStateFlow(false)
     val isAutoBackupEnabled: StateFlow<Boolean> = _isAutoBackupEnabled.asStateFlow()
-    
-    private val _monthStartDay = MutableStateFlow(1)
-    val monthStartDay: StateFlow<Int> = _monthStartDay.asStateFlow()
-    
-    init {
-        viewModelScope.launch {
-            // 确保设置存在
-            settingsRepository.ensureSettingsExist()
-            
-            // 监听设置变化
-            settings.collect { settings ->
-                settings?.let {
-                    _isAutoBackupEnabled.value = it.autoBackupEnabled
-                    _monthStartDay.value = it.monthStartDay
-                }
-            }
-        }
-    }
 
     private val _selectedCategoryType = MutableStateFlow(TransactionType.EXPENSE)
     val selectedCategoryType: StateFlow<TransactionType> = _selectedCategoryType.asStateFlow()
@@ -115,17 +85,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setAutoBackup(enabled: Boolean) {
         viewModelScope.launch {
             _isAutoBackupEnabled.value = enabled
-            settingsRepository.updateAutoBackupEnabled(enabled)
             if (enabled) {
                 schedulePeriodicBackup()
             }
-        }
-    }
-    
-    fun setMonthStartDay(day: Int) {
-        viewModelScope.launch {
-            _monthStartDay.value = day
-            settingsRepository.updateMonthStartDay(day)
         }
     }
 
