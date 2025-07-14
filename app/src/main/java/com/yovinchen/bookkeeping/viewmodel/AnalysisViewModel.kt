@@ -4,21 +4,22 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.yovinchen.bookkeeping.data.BookkeepingDatabase
+import com.yovinchen.bookkeeping.data.SettingsRepository
 import com.yovinchen.bookkeeping.model.AnalysisType
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.CategoryStat
 import com.yovinchen.bookkeeping.model.MemberStat
 import com.yovinchen.bookkeeping.model.TransactionType
+import com.yovinchen.bookkeeping.utils.DateUtils
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
 import java.time.YearMonth
-import java.time.ZoneId
 import java.util.*
 
 class AnalysisViewModel(application: Application) : AndroidViewModel(application) {
     private val recordDao = BookkeepingDatabase.getDatabase(application).bookkeepingDao()
     private val memberDao = BookkeepingDatabase.getDatabase(application).memberDao()
+    private val settingsRepository = SettingsRepository(BookkeepingDatabase.getDatabase(application).settingsDao())
 
     private val _startMonth = MutableStateFlow(YearMonth.now())
     val startMonth: StateFlow<YearMonth> = _startMonth.asStateFlow()
@@ -38,15 +39,40 @@ class AnalysisViewModel(application: Application) : AndroidViewModel(application
     private val _records = MutableStateFlow<List<BookkeepingRecord>>(emptyList())
     val records: StateFlow<List<BookkeepingRecord>> = _records.asStateFlow()
 
+    // 存储月度开始日期设置
+    private val _monthStartDay = MutableStateFlow(1)
+    val monthStartDay: StateFlow<Int> = _monthStartDay.asStateFlow()
+
     init {
+        // 订阅设置变化，获取月度开始日期
         viewModelScope.launch {
-            combine(startMonth, endMonth, selectedAnalysisType) { start, end, type ->
-                Triple(start, end, type)
-            }.collect { (start, end, type) ->
-                updateStats(start, end, type)
+            settingsRepository.getSettings().collect { settings ->
+                _monthStartDay.value = settings?.monthStartDay ?: 1
+            }
+        }
+        
+        // 当月度开始日期、起始月份、结束月份或分析类型变化时，更新统计数据
+        viewModelScope.launch {
+            combine(
+                startMonth, 
+                endMonth, 
+                selectedAnalysisType,
+                monthStartDay
+            ) { start, end, type, startDay ->
+                UpdateParams(start, end, type, startDay)
+            }.collect { params ->
+                updateStats(params.start, params.end, params.type, params.startDay)
             }
         }
     }
+
+    // 用于传递更新参数的数据类
+    private data class UpdateParams(
+        val start: YearMonth,
+        val end: YearMonth,
+        val type: AnalysisType,
+        val startDay: Int
+    )
 
     fun setStartMonth(month: YearMonth) {
         _startMonth.value = month
@@ -60,16 +86,16 @@ class AnalysisViewModel(application: Application) : AndroidViewModel(application
         _selectedAnalysisType.value = type
     }
 
-    private suspend fun updateStats(startMonth: YearMonth, endMonth: YearMonth, type: AnalysisType) {
+    private suspend fun updateStats(startMonth: YearMonth, endMonth: YearMonth, type: AnalysisType, monthStartDay: Int) {
         val records = recordDao.getAllRecords().first()
         
-        // 过滤日期范围内的记录
-        val monthRecords = records.filter {
-            val recordDate = Date(it.date.time)
-            val localDateTime = LocalDateTime.ofInstant(recordDate.toInstant(), ZoneId.systemDefault())
-            val yearMonth = YearMonth.from(localDateTime)
-            yearMonth.isAfter(startMonth.minusMonths(1)) && 
-            yearMonth.isBefore(endMonth.plusMonths(1))
+        // 使用 DateUtils 过滤日期范围内的记录
+        val monthRecords = records.filter { record ->
+            val recordDate = Date(record.date.time)
+            val accountingMonth = DateUtils.getAccountingMonth(recordDate, monthStartDay)
+            
+            // 检查记账月份是否在选定的范围内
+            accountingMonth >= startMonth && accountingMonth <= endMonth
         }
 
         // 更新记录数据
