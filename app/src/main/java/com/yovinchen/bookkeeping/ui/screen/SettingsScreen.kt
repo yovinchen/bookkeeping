@@ -4,13 +4,19 @@ import android.content.Context
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.yovinchen.bookkeeping.model.ThemeMode
@@ -36,7 +42,10 @@ fun SettingsScreen(
     val categories by viewModel.categories.collectAsState()
     val selectedType by viewModel.selectedCategoryType.collectAsState()
     val members by memberViewModel.allMembers.collectAsState(initial = emptyList())
+    val monthStartDay by viewModel.monthStartDay.collectAsState()
     val context = LocalContext.current
+    
+    var showMonthStartDayDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 成员管理设置项
@@ -80,6 +89,15 @@ fun SettingsScreen(
                 )
             },
             modifier = Modifier.clickable { showThemeDialog = true }
+        )
+        
+        HorizontalDivider()
+        
+        // 月度开始日期设置项
+        ListItem(
+            headlineContent = { Text("月度开始日期") },
+            supportingContent = { Text("每月从${monthStartDay}号开始计算") },
+            modifier = Modifier.clickable { showMonthStartDayDialog = true }
         )
 
         if (showThemeDialog) {
@@ -140,6 +158,76 @@ fun SettingsScreen(
                 confirmButton = {
                     TextButton(onClick = { showThemeDialog = false }) {
                         Text("关闭")
+                    }
+                }
+            )
+        }
+        
+        // 月度开始日期对话框
+        if (showMonthStartDayDialog) {
+            AlertDialog(
+                onDismissRequest = { showMonthStartDayDialog = false },
+                title = { Text("选择月度开始日期") },
+                text = {
+                    Column {
+                        Text("选择每月记账的开始日期（1-28号）")
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // 日期选择器
+                        val days = (1..28).toList()
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(7),
+                            modifier = Modifier.fillMaxWidth().height(280.dp),
+                            contentPadding = PaddingValues(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(days) { day ->
+                                Surface(
+                                    onClick = {
+                                        viewModel.setMonthStartDay(day)
+                                        showMonthStartDayDialog = false
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (day == monthStartDay) {
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    } else {
+                                        MaterialTheme.colorScheme.surface
+                                    },
+                                    border = BorderStroke(
+                                        width = 1.dp,
+                                        color = if (day == monthStartDay) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.outline
+                                        }
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .aspectRatio(1f)
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        Text(
+                                            text = day.toString(),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = if (day == monthStartDay) {
+                                                MaterialTheme.colorScheme.onPrimaryContainer
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showMonthStartDayDialog = false }) {
+                        Text("取消")
                     }
                 }
             )
