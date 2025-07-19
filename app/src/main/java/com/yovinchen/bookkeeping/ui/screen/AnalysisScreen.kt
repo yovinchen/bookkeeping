@@ -38,12 +38,14 @@ import com.yovinchen.bookkeeping.model.MemberStat
 import com.yovinchen.bookkeeping.ui.components.CategoryPieChart
 import com.yovinchen.bookkeeping.ui.components.CategoryStatItem
 import com.yovinchen.bookkeeping.ui.components.DateRangePicker
+import com.yovinchen.bookkeeping.ui.components.DetailedAnalysisReport
+import com.yovinchen.bookkeeping.ui.components.MonthlyYearlyReport
 import com.yovinchen.bookkeeping.ui.components.TrendLineChart
 import com.yovinchen.bookkeeping.viewmodel.AnalysisViewModel
 import java.time.YearMonth
 
 enum class ViewMode {
-    CATEGORY, MEMBER
+    CATEGORY, MEMBER, REPORT
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,7 +95,13 @@ fun AnalysisScreen(
                     Button(
                         onClick = { showViewModeMenu = true }
                     ) {
-                        Text(if (currentViewMode == ViewMode.CATEGORY) "分类" else "成员")
+                        Text(
+                            when {
+                                currentViewMode == ViewMode.CATEGORY -> "分类"
+                                currentViewMode == ViewMode.MEMBER -> "成员"
+                                else -> "报表"
+                            }
+                        )
                         Icon(Icons.Default.ArrowDropDown, "切换视图")
                     }
                     DropdownMenu(
@@ -111,6 +119,13 @@ fun AnalysisScreen(
                             text = { Text("成员") },
                             onClick = {
                                 currentViewMode = ViewMode.MEMBER
+                                showViewModeMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("报表") },
+                            onClick = {
+                                currentViewMode = ViewMode.REPORT
                                 showViewModeMenu = false
                             }
                         )
@@ -159,41 +174,68 @@ fun AnalysisScreen(
                         }
                     }
                     else -> {
-                        // 饼图视图
-                        item {
-                            CategoryPieChart(
-                                categoryData = categoryStats.map { Pair(it.category, it.percentage.toFloat()) },
-                                memberData = memberStats.map { Pair(it.member, it.percentage.toFloat()) },
-                                currentViewMode = currentViewMode == ViewMode.MEMBER,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp)
-                                    .padding(bottom = 16.dp),
-                                onCategoryClick = { category ->
-                                    if (currentViewMode == ViewMode.CATEGORY) {
-                                        onNavigateToCategoryDetail(category, startMonth, endMonth)
-                                    } else {
-                                        onNavigateToMemberDetail(category, startMonth, endMonth, selectedAnalysisType)
+                        if (currentViewMode == ViewMode.REPORT) {
+                            // 报表视图
+                            item {
+                                MonthlyYearlyReport(
+                                    records = records,
+                                    period = if (startMonth == endMonth) "月度" else "年度",
+                                    startMonth = startMonth,
+                                    endMonth = endMonth,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp)
+                                )
+                            }
+                            
+                            // 详细分析报表
+                            item {
+                                DetailedAnalysisReport(
+                                    records = records,
+                                    startMonth = startMonth,
+                                    endMonth = endMonth,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 16.dp)
+                                )
+                            }
+                        } else {
+                            // 饼图视图
+                            item {
+                                CategoryPieChart(
+                                    categoryData = categoryStats.map { Pair(it.category, it.percentage.toFloat()) },
+                                    memberData = memberStats.map { Pair(it.member, it.percentage.toFloat()) },
+                                    currentViewMode = currentViewMode == ViewMode.MEMBER,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(200.dp)
+                                        .padding(bottom = 16.dp),
+                                    onCategoryClick = { category ->
+                                        if (currentViewMode == ViewMode.CATEGORY) {
+                                            onNavigateToCategoryDetail(category, startMonth, endMonth)
+                                        } else {
+                                            onNavigateToMemberDetail(category, startMonth, endMonth, selectedAnalysisType)
+                                        }
                                     }
-                                }
-                            )
-                        }
+                                )
+                            }
 
-                        // 统计列表
-                        items(if (currentViewMode == ViewMode.CATEGORY) categoryStats else memberStats) { stat ->
-                            val category = if (stat is CategoryStat) stat.category else null
-                            val member = if (stat is MemberStat) stat.member else null
+                            // 统计列表
+                            items(if (currentViewMode == ViewMode.CATEGORY) categoryStats else memberStats) { stat ->
+                                val category = if (stat is CategoryStat) stat.category else null
+                                val member = if (stat is MemberStat) stat.member else null
 
-                            CategoryStatItem(
-                                stat = stat,
-                                onClick = {
-                                    if (currentViewMode == ViewMode.CATEGORY && category != null) {
-                                        onNavigateToCategoryDetail(category, startMonth, endMonth)
-                                    } else if (currentViewMode == ViewMode.MEMBER && member != null) {
-                                        onNavigateToMemberDetail(member, startMonth, endMonth, selectedAnalysisType)
+                                CategoryStatItem(
+                                    stat = stat,
+                                    onClick = {
+                                        if (currentViewMode == ViewMode.CATEGORY && category != null) {
+                                            onNavigateToCategoryDetail(category, startMonth, endMonth)
+                                        } else if (currentViewMode == ViewMode.MEMBER && member != null) {
+                                            onNavigateToMemberDetail(member, startMonth, endMonth, selectedAnalysisType)
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
