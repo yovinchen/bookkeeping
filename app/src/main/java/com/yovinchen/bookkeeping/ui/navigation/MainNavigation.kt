@@ -47,6 +47,10 @@ sealed class Screen(
         "设置",
         iconResId = R.drawable.setting
     )
+    object Budget : Screen(
+        "budget",
+        "预算管理"
+    )
     object CategoryDetail : Screen(
         "category_detail/{category}/{startMonth}/{endMonth}",
         "分类详情"
@@ -148,8 +152,15 @@ fun MainNavigation(
             composable(Screen.Settings.route) {
                 SettingsScreen(
                     currentTheme = currentTheme,
-                    onThemeChange = onThemeChange
+                    onThemeChange = onThemeChange,
+                    onNavigateToBudget = {
+                        navController.navigate(Screen.Budget.route)
+                    }
                 )
+            }
+            
+            composable(Screen.Budget.route) {
+                BudgetScreen()
             }
 
             composable(

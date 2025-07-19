@@ -31,6 +31,7 @@ import com.yovinchen.bookkeeping.viewmodel.*
 fun SettingsScreen(
     currentTheme: ThemeMode,
     onThemeChange: (ThemeMode) -> Unit,
+    onNavigateToBudget: () -> Unit = {},
     viewModel: SettingsViewModel = viewModel(),
     memberViewModel: MemberViewModel = viewModel()
 ) {
@@ -73,6 +74,17 @@ fun SettingsScreen(
             headlineContent = { Text("数据备份") },
             supportingContent = { Text("备份和恢复数据") },
             modifier = Modifier.clickable { showBackupDialog = true }
+        )
+
+        HorizontalDivider()
+        
+        // 预算管理设置项
+        ListItem(
+            headlineContent = { Text("预算管理") },
+            supportingContent = { Text("设置和管理预算") },
+            modifier = Modifier.clickable { 
+                onNavigateToBudget()
+            }
         )
 
         HorizontalDivider()
