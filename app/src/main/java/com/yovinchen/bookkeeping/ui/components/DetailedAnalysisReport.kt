@@ -54,67 +54,59 @@ fun DetailedAnalysisReport(
     val totalIncome = incomeRecords.sumOf { it.amount }
     val totalExpense = expenseRecords.sumOf { it.amount }
     
-    LazyColumn(
+    Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // 时间范围标题
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Text(
-                    text = if (startMonth == endMonth) {
-                        "统计期间：${startMonth.format(DateTimeFormatter.ofPattern("yyyy年MM月"))}"
-                    } else {
-                        "统计期间：${startMonth.format(DateTimeFormatter.ofPattern("yyyy年MM月"))} 至 ${endMonth.format(DateTimeFormatter.ofPattern("yyyy年MM月"))}"
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(16.dp),
-                    textAlign = TextAlign.Center
-                )
-            }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Text(
+                text = if (startMonth == endMonth) {
+                    "统计期间：${startMonth.format(DateTimeFormatter.ofPattern("yyyy年MM月"))}"
+                } else {
+                    "统计期间：${startMonth.format(DateTimeFormatter.ofPattern("yyyy年MM月"))} 至 ${endMonth.format(DateTimeFormatter.ofPattern("yyyy年MM月"))}"
+                },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(16.dp),
+                textAlign = TextAlign.Center
+            )
         }
         
         // 支出分类详情
         if (expenseByCategory.isNotEmpty()) {
-            item {
-                CategoryDetailCard(
-                    title = "支出分类明细",
-                    categoryData = expenseByCategory,
-                    total = totalExpense,
-                    color = MaterialTheme.colorScheme.error,
-                    currencyFormatter = currencyFormatter
-                )
-            }
+            CategoryDetailCard(
+                title = "支出分类明细",
+                categoryData = expenseByCategory,
+                total = totalExpense,
+                color = MaterialTheme.colorScheme.error,
+                currencyFormatter = currencyFormatter
+            )
         }
         
         // 收入分类详情
         if (incomeByCategory.isNotEmpty()) {
-            item {
-                CategoryDetailCard(
-                    title = "收入分类明细",
-                    categoryData = incomeByCategory,
-                    total = totalIncome,
-                    color = MaterialTheme.colorScheme.primary,
-                    currencyFormatter = currencyFormatter
-                )
-            }
+            CategoryDetailCard(
+                title = "收入分类明细",
+                categoryData = incomeByCategory,
+                total = totalIncome,
+                color = MaterialTheme.colorScheme.primary,
+                currencyFormatter = currencyFormatter
+            )
         }
         
         // 分类占比前5名
         if (expenseByCategory.isNotEmpty()) {
-            item {
-                TopCategoriesCard(
-                    title = "支出TOP5",
-                    categoryData = expenseByCategory.take(5),
-                    total = totalExpense,
-                    color = MaterialTheme.colorScheme.error,
-                    currencyFormatter = currencyFormatter
-                )
-            }
+            TopCategoriesCard(
+                title = "支出TOP5",
+                categoryData = expenseByCategory.take(5),
+                total = totalExpense,
+                color = MaterialTheme.colorScheme.error,
+                currencyFormatter = currencyFormatter
+            )
         }
     }
 }
