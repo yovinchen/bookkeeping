@@ -1,6 +1,7 @@
 package com.yovinchen.bookkeeping.data
 
 import androidx.room.TypeConverter
+import com.yovinchen.bookkeeping.model.BudgetType
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -28,5 +29,15 @@ class Converters {
     @TypeConverter
     fun toDate(timestamp: String?): Date? {
         return timestamp?.let { Date(it.toLong()) }
+    }
+    
+    @TypeConverter
+    fun fromBudgetType(budgetType: BudgetType?): String? {
+        return budgetType?.name
+    }
+    
+    @TypeConverter
+    fun toBudgetType(budgetType: String?): BudgetType? {
+        return budgetType?.let { BudgetType.valueOf(it) }
     }
 }

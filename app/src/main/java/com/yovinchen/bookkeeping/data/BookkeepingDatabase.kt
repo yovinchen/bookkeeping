@@ -10,17 +10,19 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.yovinchen.bookkeeping.R
 import com.yovinchen.bookkeeping.model.BookkeepingRecord
+import com.yovinchen.bookkeeping.model.Budget
 import com.yovinchen.bookkeeping.model.Category
 import com.yovinchen.bookkeeping.model.Converters
 import com.yovinchen.bookkeeping.model.Member
+import com.yovinchen.bookkeeping.model.Settings
 import com.yovinchen.bookkeeping.model.TransactionType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [BookkeepingRecord::class, Category::class, Member::class],
-    version = 4,
+    entities = [BookkeepingRecord::class, Category::class, Member::class, Settings::class, Budget::class],
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -28,6 +30,8 @@ abstract class BookkeepingDatabase : RoomDatabase() {
     abstract fun bookkeepingDao(): BookkeepingDao
     abstract fun categoryDao(): CategoryDao
     abstract fun memberDao(): MemberDao
+    abstract fun settingsDao(): SettingsDao
+    abstract fun budgetDao(): BudgetDao
 
     companion object {
         private const val TAG = "BookkeepingDatabase"
@@ -124,6 +128,52 @@ abstract class BookkeepingDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 创建设置表
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS settings (
+                        id INTEGER PRIMARY KEY NOT NULL DEFAULT 1,
+                        monthStartDay INTEGER NOT NULL DEFAULT 1,
+                        themeMode TEXT NOT NULL DEFAULT 'FOLLOW_SYSTEM',
+                        autoBackupEnabled INTEGER NOT NULL DEFAULT 0,
+                        autoBackupInterval INTEGER NOT NULL DEFAULT 7,
+                        lastBackupTime INTEGER NOT NULL DEFAULT 0
+                    )
+                """)
+                
+                // 插入默认设置
+                db.execSQL("""
+                    INSERT OR IGNORE INTO settings (id, monthStartDay, themeMode, autoBackupEnabled, autoBackupInterval, lastBackupTime)
+                    VALUES (1, 1, 'FOLLOW_SYSTEM', 0, 7, 0)
+                """)
+            }
+        }
+        
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // 创建预算表
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS budgets (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        type TEXT NOT NULL,
+                        categoryName TEXT,
+                        memberId INTEGER,
+                        amount REAL NOT NULL,
+                        startDate INTEGER NOT NULL,
+                        endDate INTEGER NOT NULL,
+                        isEnabled INTEGER NOT NULL DEFAULT 1,
+                        alertThreshold REAL NOT NULL DEFAULT 0.8,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL
+                    )
+                """)
+                
+                // 在 settings 表中添加 encryptBackup 列
+                db.execSQL("ALTER TABLE settings ADD COLUMN encryptBackup INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
         @Volatile
         private var INSTANCE: BookkeepingDatabase? = null
 
@@ -134,7 +184,7 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                     BookkeepingDatabase::class.java,
                     "bookkeeping_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
@@ -142,6 +192,11 @@ abstract class BookkeepingDatabase : RoomDatabase() {
                             CoroutineScope(Dispatchers.IO).launch {
                                 try {
                                     val database = getDatabase(context)
+                                    
+                                    // 初始化默认设置
+                                    database.settingsDao().apply {
+                                        updateSettings(Settings())
+                                    }
                                     
                                     // 初始化默认成员
                                     database.memberDao().apply {
