@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.yovinchen.bookkeeping.model.Settings
 import com.yovinchen.bookkeeping.model.ThemeMode
 import com.yovinchen.bookkeeping.ui.components.*
 import com.yovinchen.bookkeeping.ui.dialog.*
@@ -43,6 +44,7 @@ fun SettingsScreen(
     val selectedType by viewModel.selectedCategoryType.collectAsState()
     val members by memberViewModel.allMembers.collectAsState(initial = emptyList())
     val monthStartDay by viewModel.monthStartDay.collectAsState()
+    val settings by viewModel.settings.collectAsState()
     val context = LocalContext.current
     
     var showMonthStartDayDialog by remember { mutableStateOf(false) }
@@ -277,6 +279,29 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
+                        
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        
+                        // 备份加密开关
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("备份加密", modifier = Modifier.weight(1f))
+                            Switch(
+                                checked = settings?.encryptBackup ?: true,
+                                onCheckedChange = { enabled ->
+                                    viewModel.updateSettings(
+                                        settings?.copy(encryptBackup = enabled) ?: Settings(encryptBackup = enabled)
+                                    )
+                                }
+                            )
+                        }
+                        Text(
+                            "开启后，导出的备份文件将被加密保护",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 },
                 confirmButton = {

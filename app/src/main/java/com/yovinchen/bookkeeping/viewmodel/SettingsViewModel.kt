@@ -14,6 +14,7 @@ import com.yovinchen.bookkeeping.model.BookkeepingRecord
 import com.yovinchen.bookkeeping.model.Category
 import com.yovinchen.bookkeeping.model.Settings
 import com.yovinchen.bookkeeping.model.TransactionType
+import com.yovinchen.bookkeeping.utils.EncryptionUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -30,6 +31,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
+import java.io.StringWriter
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -157,15 +159,24 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun exportToCSV(context: Context, customDir: File? = null) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val currentSettings = settings.value ?: Settings()
                 val timestamp =
                     SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-                val fileName = "bookkeeping_backup_$timestamp.csv"
+                val shouldEncrypt = currentSettings.encryptBackup
+                val fileName = if (shouldEncrypt) {
+                    "bookkeeping_backup_$timestamp.csv.enc"
+                } else {
+                    "bookkeeping_backup_$timestamp.csv"
+                }
                 val downloadsDir = customDir ?: Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOWNLOADS
                 )
                 val file = File(downloadsDir, fileName)
 
-                CSVWriter(FileWriter(file)).use { writer ->
+                // 先创建CSV内容到字符串
+                val csvContent = StringWriter().use { stringWriter ->
+                    val writer = CSVWriter(stringWriter)
+                    
                     // 写入头部
                     writer.writeNext(arrayOf("日期", "类型", "金额", "类别", "备注", "成员"))
 
@@ -189,11 +200,25 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                             )
                         )
                     }
+                    writer.close()
+                    stringWriter.toString()
+                }
+
+                // 根据设置决定是否加密
+                if (shouldEncrypt) {
+                    val encryptedContent = EncryptionUtils.encrypt(csvContent)
+                    file.writeText(encryptedContent)
+                } else {
+                    file.writeText(csvContent)
                 }
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "CSV导出成功: ${file.absolutePath}", Toast.LENGTH_LONG)
-                        .show()
+                    val message = if (shouldEncrypt) {
+                        "CSV导出成功（已加密）: ${file.absolutePath}"
+                    } else {
+                        "CSV导出成功: ${file.absolutePath}"
+                    }
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -207,6 +232,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun exportToExcel(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val currentSettings = settings.value ?: Settings()
+                val shouldEncrypt = currentSettings.encryptBackup
+                
                 val workbook = XSSFWorkbook()
                 val sheet = workbook.createSheet("账目记录")
 
@@ -239,18 +267,39 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
                 val timestamp =
                     SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-                val fileName = "bookkeeping_backup_$timestamp.xlsx"
+                val fileName = if (shouldEncrypt) {
+                    "bookkeeping_backup_$timestamp.xlsx.enc"
+                } else {
+                    "bookkeeping_backup_$timestamp.xlsx"
+                }
                 val downloadsDir =
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                 val file = File(downloadsDir, fileName)
 
-                workbook.write(file.outputStream())
+                if (shouldEncrypt) {
+                    // 将 workbook 写入字节数组
+                    val byteArrayOutputStream = java.io.ByteArrayOutputStream()
+                    workbook.write(byteArrayOutputStream)
+                    val excelBytes = byteArrayOutputStream.toByteArray()
+                    
+                    // 加密字节数组
+                    val encryptedBytes = EncryptionUtils.encryptBytes(excelBytes)
+                    
+                    // 写入加密文件
+                    file.writeBytes(encryptedBytes)
+                } else {
+                    workbook.write(file.outputStream())
+                }
+                
                 workbook.close()
 
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        context, "Excel导出成功: ${file.absolutePath}", Toast.LENGTH_LONG
-                    ).show()
+                    val message = if (shouldEncrypt) {
+                        "Excel导出成功（已加密）: ${file.absolutePath}"
+                    } else {
+                        "Excel导出成功: ${file.absolutePath}"
+                    }
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -265,10 +314,30 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 when {
+                    backupFile.name.endsWith(".csv.enc", ignoreCase = true) -> {
+                        // 解密CSV文件
+                        val encryptedContent = backupFile.readText()
+                        val decryptedContent = EncryptionUtils.decrypt(encryptedContent)
+                        val tempFile = File(context.cacheDir, "temp_decrypted.csv")
+                        tempFile.writeText(decryptedContent)
+                        restoreFromCSV(tempFile)
+                        tempFile.delete()
+                    }
+                    
                     backupFile.name.endsWith(".csv", ignoreCase = true) -> {
                         restoreFromCSV(backupFile)
                     }
 
+                    backupFile.name.endsWith(".xlsx.enc", ignoreCase = true) -> {
+                        // 解密Excel文件
+                        val encryptedBytes = backupFile.readBytes()
+                        val decryptedBytes = EncryptionUtils.decryptBytes(encryptedBytes)
+                        val tempFile = File(context.cacheDir, "temp_decrypted.xlsx")
+                        tempFile.writeBytes(decryptedBytes)
+                        restoreFromExcel(tempFile)
+                        tempFile.delete()
+                    }
+                    
                     backupFile.name.endsWith(".xlsx", ignoreCase = true) -> {
                         restoreFromExcel(backupFile)
                     }
@@ -287,7 +356,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "数据恢复失败: ${e.message}", Toast.LENGTH_LONG).show()
+                    val errorMessage = when {
+                        e.message?.contains("decrypt") == true -> "解密失败，请确认文件未损坏"
+                        else -> "数据恢复失败: ${e.message}"
+                    }
+                    Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -342,5 +415,11 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private suspend fun findMemberIdByName(name: String): Int? {
         return memberDao.getAllMembers().first().find { member -> member.name == name }?.id
+    }
+    
+    fun updateSettings(settings: Settings) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings(settings)
+        }
     }
 }

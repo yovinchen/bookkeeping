@@ -29,4 +29,7 @@ interface SettingsDao {
     
     @Query("UPDATE settings SET lastBackupTime = :time WHERE id = 1")
     suspend fun updateLastBackupTime(time: Long)
+    
+    @Query("UPDATE settings SET encryptBackup = :encrypt WHERE id = 1")
+    suspend fun updateEncryptBackup(encrypt: Boolean)
 }

@@ -107,11 +107,16 @@ object FilePickerUtil {
     private fun isValidFileType(fileName: String, mimeType: String?): Boolean {
         val fileExtension = fileName.lowercase()
         return fileExtension.endsWith(".csv") || 
+               fileExtension.endsWith(".csv.enc") ||
                fileExtension.endsWith(".xlsx") ||
+               fileExtension.endsWith(".xlsx.enc") ||
                fileExtension.endsWith(".xls") ||
+               fileExtension.endsWith(".xls.enc") ||
+               fileExtension.endsWith(".enc") ||
                mimeType == "text/csv" ||
                mimeType == "application/vnd.ms-excel" ||
-               mimeType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+               mimeType == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+               mimeType == "application/octet-stream" // 加密文件可能被识别为二进制流
     }
 
     /**
