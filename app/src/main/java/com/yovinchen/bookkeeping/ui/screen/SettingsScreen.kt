@@ -13,20 +13,27 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import com.yovinchen.bookkeeping.model.Settings
+import androidx.compose.ui.draw.shadow
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.text.font.FontWeight
 import com.yovinchen.bookkeeping.model.ThemeMode
 import com.yovinchen.bookkeeping.ui.components.*
 import com.yovinchen.bookkeeping.ui.dialog.*
 import com.yovinchen.bookkeeping.utils.FilePickerUtil
 import com.yovinchen.bookkeeping.viewmodel.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     currentTheme: ThemeMode,
@@ -50,69 +57,350 @@ fun SettingsScreen(
     
     var showMonthStartDayDialog by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // 成员管理设置项
-        ListItem(
-            headlineContent = { Text("成员管理") },
-            supportingContent = { Text("管理账本成员") },
-            modifier = Modifier.clickable { showMemberDialog = true }
-        )
-
-        HorizontalDivider()
-
-        // 类别管理设置项
-        ListItem(
-            headlineContent = { Text("类别管理") },
-            supportingContent = { Text("管理收入和支出类别") },
-            modifier = Modifier.clickable { showCategoryDialog = true }
-        )
-
-        HorizontalDivider()
-
-        // 数据备份设置项
-        ListItem(
-            headlineContent = { Text("数据备份") },
-            supportingContent = { Text("备份和恢复数据") },
-            modifier = Modifier.clickable { showBackupDialog = true }
-        )
-
-        HorizontalDivider()
-        
-        // 预算管理设置项
-        ListItem(
-            headlineContent = { Text("预算管理") },
-            supportingContent = { Text("设置和管理预算") },
-            modifier = Modifier.clickable { 
-                onNavigateToBudget()
-            }
-        )
-
-        HorizontalDivider()
-
-        // 主题设置项
-        ListItem(
-            headlineContent = { Text("主题设置") },
-            supportingContent = {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .animateContentSize(
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessLow
+                )
+            )
+    ) {
+        // 设置页面标题
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 4.dp,
+                    shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+                    clip = false
+                ),
+            shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
-                    when (currentTheme) {
-                        is ThemeMode.FOLLOW_SYSTEM -> "跟随系统"
-                        is ThemeMode.LIGHT -> "浅色"
-                        is ThemeMode.DARK -> "深色"
-                        is ThemeMode.CUSTOM -> "自定义颜色"
+                    text = "设置",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        // 成员管理设置项
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(300)) + slideInVertically(
+                initialOffsetY = { -40 },
+                animationSpec = tween(300)
+            ),
+            exit = fadeOut() + slideOutVertically()
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clickable { showMemberDialog = true },
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp
+            ) {
+                ListItem(
+                    headlineContent = { 
+                        Text(
+                            "成员管理",
+                            style = MaterialTheme.typography.titleMedium
+                        ) 
+                    },
+                    supportingContent = { 
+                        Text(
+                            "管理账本成员",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ) 
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.Group,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 )
-            },
-            modifier = Modifier.clickable { showThemeDialog = true }
-        )
+            }
+        }
+
+        // 类别管理设置项
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(300, delayMillis = 50)) + slideInVertically(
+                initialOffsetY = { -40 },
+                animationSpec = tween(300, delayMillis = 50)
+            ),
+            exit = fadeOut() + slideOutVertically()
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clickable { showCategoryDialog = true },
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp
+            ) {
+                ListItem(
+                    headlineContent = { 
+                        Text(
+                            "类别管理",
+                            style = MaterialTheme.typography.titleMedium
+                        ) 
+                    },
+                    supportingContent = { 
+                        Text(
+                            "管理收入和支出类别",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ) 
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.Category,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+            }
+        }
+
+        // 数据备份设置项
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(300, delayMillis = 100)) + slideInVertically(
+                initialOffsetY = { -40 },
+                animationSpec = tween(300, delayMillis = 100)
+            ),
+            exit = fadeOut() + slideOutVertically()
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clickable { showBackupDialog = true },
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp
+            ) {
+                ListItem(
+                    headlineContent = { 
+                        Text(
+                            "数据备份",
+                            style = MaterialTheme.typography.titleMedium
+                        ) 
+                    },
+                    supportingContent = { 
+                        Text(
+                            "备份和恢复数据",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ) 
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.Backup,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+            }
+        }
         
-        HorizontalDivider()
+        // 预算管理设置项
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(300, delayMillis = 150)) + slideInVertically(
+                initialOffsetY = { -40 },
+                animationSpec = tween(300, delayMillis = 150)
+            ),
+            exit = fadeOut() + slideOutVertically()
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clickable { onNavigateToBudget() },
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp
+            ) {
+                ListItem(
+                    headlineContent = { 
+                        Text(
+                            "预算管理",
+                            style = MaterialTheme.typography.titleMedium
+                        ) 
+                    },
+                    supportingContent = { 
+                        Text(
+                            "设置和管理预算",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ) 
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.AccountBalance,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+            }
+        }
+
+        // 主题设置项
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(300, delayMillis = 200)) + slideInVertically(
+                initialOffsetY = { -40 },
+                animationSpec = tween(300, delayMillis = 200)
+            ),
+            exit = fadeOut() + slideOutVertically()
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clickable { showThemeDialog = true },
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp
+            ) {
+                ListItem(
+                    headlineContent = { 
+                        Text(
+                            "主题设置",
+                            style = MaterialTheme.typography.titleMedium
+                        ) 
+                    },
+                    supportingContent = {
+                        Text(
+                            when (currentTheme) {
+                                is ThemeMode.FOLLOW_SYSTEM -> "跟随系统"
+                                is ThemeMode.LIGHT -> "浅色"
+                                is ThemeMode.DARK -> "深色"
+                                is ThemeMode.CUSTOM -> "自定义颜色"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+            }
+        }
         
         // 月度开始日期设置项
-        ListItem(
-            headlineContent = { Text("月度开始日期") },
-            supportingContent = { Text("每月从${monthStartDay}号开始计算") },
-            modifier = Modifier.clickable { showMonthStartDayDialog = true }
-        )
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn(animationSpec = tween(300, delayMillis = 250)) + slideInVertically(
+                initialOffsetY = { -40 },
+                animationSpec = tween(300, delayMillis = 250)
+            ),
+            exit = fadeOut() + slideOutVertically()
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .clickable { showMonthStartDayDialog = true },
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp
+            ) {
+                ListItem(
+                    headlineContent = { 
+                        Text(
+                            "月度开始日期",
+                            style = MaterialTheme.typography.titleMedium
+                        ) 
+                    },
+                    supportingContent = { 
+                        Text(
+                            "每月从${monthStartDay}号开始计算",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        ) 
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+            }
+        }
 
         if (showThemeDialog) {
             AlertDialog(
@@ -222,7 +510,16 @@ fun SettingsScreen(
                                 ) {
                                     Box(
                                         contentAlignment = Alignment.Center,
-                                        modifier = Modifier.fillMaxSize()
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .scale(
+                                                animateFloatAsState(
+                                                    targetValue = if (day == monthStartDay) 1.1f else 1f,
+                                                    animationSpec = spring(
+                                                        dampingRatio = Spring.DampingRatioMediumBouncy
+                                                    )
+                                                ).value
+                                            )
                                     ) {
                                         Text(
                                             text = day.toString(),

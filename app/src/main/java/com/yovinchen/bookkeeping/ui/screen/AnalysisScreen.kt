@@ -32,6 +32,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.lazy.itemsIndexed
 import com.yovinchen.bookkeeping.model.AnalysisType
 import com.yovinchen.bookkeeping.model.CategoryStat
 import com.yovinchen.bookkeeping.model.MemberStat
@@ -162,7 +166,16 @@ fun AnalysisScreen(
                     AnalysisType.TREND -> {
                         // 趋势视图
                         item {
-                            if (records.isNotEmpty()) {
+                            AnimatedVisibility(
+                                visible = records.isNotEmpty(),
+                                enter = fadeIn(animationSpec = tween(500)) + expandVertically(
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                ),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
                                 TrendLineChart(
                                     records = records,
                                     modifier = Modifier
@@ -202,7 +215,18 @@ fun AnalysisScreen(
                         } else {
                             // 饼图视图
                             item {
-                                CategoryPieChart(
+                                AnimatedVisibility(
+                                    visible = true,
+                                    enter = fadeIn(animationSpec = tween(500)) + scaleIn(
+                                        initialScale = 0.8f,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    ),
+                                    exit = fadeOut() + scaleOut()
+                                ) {
+                                    CategoryPieChart(
                                     categoryData = categoryStats.map { Pair(it.category, it.percentage.toFloat()) },
                                     memberData = memberStats.map { Pair(it.member, it.percentage.toFloat()) },
                                     currentViewMode = currentViewMode == ViewMode.MEMBER,
@@ -218,6 +242,7 @@ fun AnalysisScreen(
                                         }
                                     }
                                 )
+                                }
                             }
 
                             // 统计列表

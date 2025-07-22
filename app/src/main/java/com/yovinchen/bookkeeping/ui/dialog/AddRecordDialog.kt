@@ -7,7 +7,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
+import com.yovinchen.bookkeeping.ui.components.AnimatedDialog
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import com.yovinchen.bookkeeping.ui.theme.ExpenseColor
+import com.yovinchen.bookkeeping.ui.theme.IncomeColor
 import com.yovinchen.bookkeeping.model.Category
 import com.yovinchen.bookkeeping.model.Member
 import com.yovinchen.bookkeeping.model.TransactionType
@@ -53,40 +62,88 @@ fun AddRecordDialog(
             ?: ""
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    AnimatedDialog(
+        visible = true,
+        onDismissRequest = onDismiss
+    ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                .padding(16.dp)
+                .animateContentSize(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium
+                    )
+                )
+                .shadow(
+                    elevation = 8.dp,
+                    shape = RoundedCornerShape(20.dp),
+                    clip = false
+                ),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
+                    .animateContentSize(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessLow
+                        )
+                    )
             ) {
                 Text(
                     text = "添加记录",
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 收入/支出选择
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn() + expandVertically()
                 ) {
-                    FilterChip(
-                        selected = selectedType == TransactionType.EXPENSE,
-                        onClick = { selectedType = TransactionType.EXPENSE },
-                        label = { Text("支出") }
-                    )
-                    FilterChip(
-                        selected = selectedType == TransactionType.INCOME,
-                        onClick = { selectedType = TransactionType.INCOME },
-                        label = { Text("收入") }
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            FilterChip(
+                                selected = selectedType == TransactionType.EXPENSE,
+                                onClick = { selectedType = TransactionType.EXPENSE },
+                                label = { Text("支出") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = ExpenseColor.copy(alpha = 0.2f),
+                                    selectedLabelColor = ExpenseColor
+                                )
+                            )
+                            FilterChip(
+                                selected = selectedType == TransactionType.INCOME,
+                                onClick = { selectedType = TransactionType.INCOME },
+                                label = { Text("收入") },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = IncomeColor.copy(alpha = 0.2f),
+                                    selectedLabelColor = IncomeColor
+                                )
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -96,7 +153,12 @@ fun AddRecordDialog(
                     onValueChange = { amount = it },
                     label = { Text("金额") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
